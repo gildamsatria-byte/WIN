@@ -83,7 +83,13 @@ main{flex:1;min-height:0;position:relative}
 .legend i{display:inline-block;width:18px;height:8px;border-radius:2px}
 
 /* Gantt */
-.gantt{flex:1;min-height:0;display:grid;grid-template-columns:var(--lw,600px) 5px minmax(0,1fr);background:var(--panel)}
+.gantt{flex:1;min-height:0;display:grid;grid-template-columns:var(--lw,600px) 5px minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:var(--panel)}
+.gantt>*{min-height:0}
+.gr{scrollbar-width:auto;scrollbar-color:var(--faint) var(--line2)}
+.gr::-webkit-scrollbar{width:12px;height:12px}
+.gr::-webkit-scrollbar-track{background:var(--line2)}
+.gr::-webkit-scrollbar-thumb{background:var(--faint);border-radius:6px;border:3px solid var(--line2)}
+.gr::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 .gl{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
 .split{cursor:col-resize;background:var(--line2)} .split:hover{background:var(--accent-soft)}
 .gh{height:48px;flex:none;border-bottom:1px solid var(--line);background:var(--panel)}
@@ -107,7 +113,7 @@ main{flex:1;min-height:0;position:relative}
 .gr{overflow:auto;position:relative;min-width:0}
 .gr .gh{position:sticky;top:0;z-index:3}
 .gr svg{display:block}
-#gsvg .bar{cursor:grab} #gsvg .bar.drag{cursor:grabbing;opacity:.8}
+#gsvg{cursor:grab;touch-action:pan-x pan-y} #gsvg .bar{cursor:grab} #gsvg .bar.drag{cursor:grabbing;opacity:.8}
 #gsvg text{font-family:var(--f-body)}
 .ro #gsvg .bar{cursor:pointer}
 
@@ -870,7 +876,7 @@ function drawGantt() {
       <div class="c-name" style="padding-left:${(t.lvl - 1) * 14 + 4}px">${t.sum ? `<button class="car ${ST.collapsed.has(t.uid) ? 'closed' : ''}" data-tog="${H(t.uid)}" aria-label="Buka/tutup">${ICON.car}</button>` : '<span style="width:16px;flex:none"></span>'}<span style="overflow:hidden;text-overflow:ellipsis">${t.ms ? '◆ ' : ''}${H(t.name)}</span></div>
       <div class="c-d">${t.ms ? '0' : nf(t.calDur, t.calDur % 1 ? 1 : 0)} h</div><div class="c-s">${fmtDn(t.startDn)}</div><div class="c-f">${fmtDn(t.finishDn)}</div>
       <div class="c-p" title="${H(predsToText(t, ST.byUid))}">${H(predsToText(t, ST.byUid))}</div><div class="c-pc">${pct}%</div></div>`;
-  }).join('') + `<div style="height:40px"></div>`;
+  }).join('') + `<div style="height:56px"></div>`;
   // Header skala
   let top = '', bot = '';
   const mStart = dn => { const d = new Date(dn * DAY); return d.getUTCDate() === 1; };
@@ -948,19 +954,22 @@ function wireGantt() {
   // Seret batang
   const svg = $('#gsvg'); let drag = null;
   svg.onpointerdown = e => {
-    const g = e.target.closest('.bar, .sumb'); if (!g) { return; }
+    const g = e.target.closest('.bar, .sumb');
+    if (!g) { const gr = $('#gr'); drag = { pan: true, x0: e.clientX, y0: e.clientY, sl: gr.scrollLeft, st: gr.scrollTop, moved: false }; svg.setPointerCapture(e.pointerId); svg.style.cursor = 'grabbing'; return; }
     const t = ST.byUid.get(g.dataset.uid); if (!t) return;
     drag = { g, t, x0: e.clientX, mode: e.target.classList.contains('hnd') ? 'size' : 'move', moved: false, sum: g.classList.contains('sumb') };
     if (!ST.canWrite || drag.sum) drag.mode = 'none'; svg.setPointerCapture(e.pointerId);
   };
   svg.onpointermove = e => {
-    if (!drag) return; const dx = e.clientX - drag.x0; if (Math.abs(dx) > 3) drag.moved = true; if (!drag.moved || drag.mode === 'none') return;
+    if (!drag) return; const dx = e.clientX - drag.x0;
+    if (drag.pan) { const gr = $('#gr'); gr.scrollLeft = drag.sl - dx; gr.scrollTop = drag.st - (e.clientY - drag.y0); return; }
+    if (Math.abs(dx) > 3) drag.moved = true; if (!drag.moved || drag.mode === 'none') return;
     drag.g.classList.add('drag'); const px = PXD[ST.zoom]; const dd = Math.round(dx / px) * px;
     if (drag.mode === 'move') drag.g.setAttribute('transform', `translate(${dd} 0)`);
     else { const rs = drag.g.querySelectorAll('rect'); const w0 = +rs[0].dataset.w0 || +rs[0].getAttribute('width'); rs[0].dataset.w0 = w0; rs[0].setAttribute('width', Math.max(px, w0 + dd)); }
   };
   svg.onpointerup = e => {
-    if (!drag) return; const d = drag; drag = null; const px = PXD[ST.zoom]; const days = Math.round((e.clientX - d.x0) / px);
+    if (!drag) return; const d = drag; drag = null; if (d.pan) { svg.style.cursor = ''; return; } const px = PXD[ST.zoom]; const days = Math.round((e.clientX - d.x0) / px);
     if (!d.moved) { ST.sel = d.t.uid === ST.sel ? null : d.t.uid; renderGantt(); return; }
     if (d.mode === 'none' || !days) { renderGantt(); return; }
     pushUndo(); const cal = ST.sched.cal; const t = d.t;
