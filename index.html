@@ -538,6 +538,7 @@ async function clearAllProg() {
 /* ---------- Muat ---------- */
 function loadSchedule(obj, rev) {
   ST.proj = Object.assign({ name: 'Proyek', start: null, mpd: 480, workdays: [false, true, true, true, true, true, false], weightMode: 'dur' }, obj.proj);
+  if ((obj.tasks || []).length !== ST.tasks.length) ST.resetScroll = true;
   ST.tasks = (obj.tasks || []).map(t => ({ ...t })); ST.rev = rev || ST.rev; ST.mode = 'ready';
   recalc(); render();
 }
@@ -623,7 +624,8 @@ function render() {
   if (ST.role === 'guest') { renderReg(); return; }
   if (ST.view === 'team') { renderTeam(); return; }
   if (!ST.tasks.length) { main.innerHTML = ST.role === 'admin' ? emptyHtml() : '<div class="load">Master schedule belum tersedia. Hubungi admin proyek.</div>'; return; }
-  if (ST.view === 'gantt') renderGantt(); else if (ST.view === 'prog') renderProg(); else renderDash();
+  try { if (ST.view === 'gantt') renderGantt(); else if (ST.view === 'prog') renderProg(); else renderDash(); }
+  catch (e) { console.error(e); main.innerHTML = `<div class="view scroll"><div class="wrap"><div class="card" style="max-width:620px;margin:40px auto"><div class="empty"><h3>Tampilan gagal dimuat</h3><p>Ada data jadwal yang tidak bisa diproses: <span class="mono">${H(e.message || e)}</span></p><p>Kirim file XML-nya ke pengembang, atau coba impor ulang.</p></div></div></div></div>`; }
 }
 function emptyHtml() {
   return `<div class="view scroll"><div class="wrap"><div class="card" style="max-width:620px;margin:40px auto"><div class="empty">
@@ -690,7 +692,7 @@ function openBlank() {
       const name = $('#bName', mb).value.trim(); if (!name) { $('#bName', mb).focus(); toast('Nama proyek wajib diisi.'); return false; }
       const start = $('#bStart', mb).value || dnToIso(TODAY); const wd = [false, false, false, false, false, false, false]; $$('[data-wd]', mb).forEach(c => wd[+c.dataset.wd] = c.checked);
       if (!wd.some(Boolean)) { toast('Pilih minimal satu hari kerja.'); return false; }
-      ST.prog = {}; ST.undo = [];
+      ST.prog = {}; ST.undo = []; ST.resetScroll = true;
       loadSchedule({ proj: { name, start, mpd: 480, workdays: wd, weightMode: 'cost' }, tasks: [{ uid: '1', name: 'Pekerjaan Persiapan', lvl: 1, dur: 5, ms: false, snet: start, preds: [], unit: '', qty: 0, cost: 0, w: 0, pct0: 0, bs: null, bf: null, bd: null }] });
       ST.view = 'gantt'; ST.sel = '1'; render(); queueSave(); toast('Jadwal baru dibuat.');
     } }]);
@@ -726,7 +728,7 @@ async function doImport(file) {
     // Tanpa baseline di file -> jadikan jadwal saat ini sebagai baseline awal
     const noBase = !r.tasks.some(t => t.bs);
     closeModal(); if (!keep || (ST.proj && ST.proj.sample)) await clearAllProg();
-    ST.undo = []; ST.collapsed = new Set(); ST.sel = null;
+    ST.undo = []; ST.collapsed = new Set(); ST.sel = null; ST.resetScroll = true; ST.view = 'gantt';
     loadSchedule({ proj: r.proj, tasks: r.tasks });
     if (noBase) { setBaseline(false); toast(`${r.tasks.length} aktivitas diimpor. File tidak berisi baseline, jadwal ini ditetapkan sebagai baseline.`); }
     else toast(`${r.tasks.length} aktivitas diimpor dari ${file.name}.`);
@@ -808,14 +810,14 @@ const PXD = { day: 28, week: 11, month: 3.6 };
 function visibleTasks() { const out = []; let hide = Infinity; for (const t of ST.tasks) { if (t.lvl > hide) continue; hide = Infinity; out.push(t); if (t.sum && ST.collapsed.has(t.uid)) hide = t.lvl; } return out; }
 function ganttRange() {
   let a = Infinity, b = -Infinity; ST.tasks.forEach(t => { a = Math.min(a, t.startDn, t.bsDn ?? Infinity); b = Math.max(b, t.finishDn, t.bfDn ?? -Infinity); });
-  a = Math.min(a, ST.statusDn); b = Math.max(b, ST.statusDn);
+  if (ST.statusDn >= a - 45 && ST.statusDn <= b + 45) { a = Math.min(a, ST.statusDn); b = Math.max(b, ST.statusDn); }
   if (ST.zoom === 'month') { const d = new Date(a * DAY); a = Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / DAY); b += 40; }
   else { a -= ((dnDow(a) + 6) % 7) + 7; b += 21; }
   return { a, b };
 }
 const COLS = '34px 52px minmax(130px,1fr) 58px 84px 84px 78px 46px';
 function renderGantt() {
-  const main = $('#main'); const keep = $('.gr', main); const sx = keep ? keep.scrollLeft : null, sy = keep ? keep.scrollTop : 0;
+  const main = $('#main'); const keep = ST.resetScroll ? null : $('.gr', main); ST.resetScroll = false; const sx = keep ? keep.scrollLeft : null, sy = keep ? keep.scrollTop : 0;
   const lw = LS.get('lw') || '640px';
   main.innerHTML = `<div class="view">
     <div class="tb">
@@ -827,7 +829,7 @@ function renderGantt() {
       <button class="btn ghost edit-only" data-g="down" ${ST.sel ? '' : 'disabled'} title="Pindah ke bawah">↓</button>
       <span class="sep edit-only"></span>
       <div class="seg" role="group" aria-label="Skala waktu">${['day', 'week', 'month'].map(z => `<button data-z="${z}" aria-pressed="${ST.zoom === z}">${{ day: 'Hari', week: 'Minggu', month: 'Bulan' }[z]}</button>`).join('')}</div>
-      <button class="btn ghost" data-g="today">Hari ini</button>
+      <button class="btn ghost" data-g="start" title="Gulir ke awal proyek">Awal proyek</button><button class="btn ghost" data-g="today">Hari ini</button>
       <button class="btn ghost" data-g="fold">${ST.collapsed.size ? 'Buka semua' : 'Ringkas'}</button>
       <span class="sep edit-only"></span>
       <button class="btn edit-only" data-g="base" title="Simpan jadwal saat ini sebagai baseline">Tetapkan baseline</button>
@@ -844,12 +846,17 @@ function renderGantt() {
   </div>`;
   drawGantt();
   const gr = $('#gr'), glb = $('#glb');
-  if (sx != null) { gr.scrollLeft = sx; gr.scrollTop = sy; } else scrollToDn(ST.statusDn - 14);
+  if (sx != null) { gr.scrollLeft = sx; gr.scrollTop = sy; } else scrollHome();
   glb.scrollTop = gr.scrollTop;
   let lock = 0; gr.addEventListener('scroll', () => { if (lock === 2) { lock = 0; return; } lock = 1; glb.scrollTop = gr.scrollTop; });
   glb.addEventListener('scroll', () => { if (lock === 1) { lock = 0; return; } lock = 2; gr.scrollTop = glb.scrollTop; });
   wireGantt();
   if (ST.sel) wireDrawer();
+}
+function scrollHome(forceToday) {
+  const s = ST.sched.startDn, f = ST.sched.finishDn;
+  if (forceToday) { if (ST.statusDn < ST.grange.a || ST.statusDn > ST.grange.b) { toast('Tanggal hari ini berada di luar rentang jadwal proyek.'); scrollToDn(ST.statusDn < s ? s - 7 : f - 30); return; } scrollToDn(ST.statusDn - 14); return; }
+  scrollToDn(ST.statusDn >= s && ST.statusDn <= f ? ST.statusDn - 14 : s - 7);
 }
 function scrollToDn(dn) { const gr = $('#gr'); if (!gr || !ST.grange) return; gr.scrollLeft = Math.max(0, (dn - ST.grange.a) * PXD[ST.zoom]); }
 function drawGantt() {
@@ -885,7 +892,7 @@ function drawGantt() {
   const row = new Map(vis.map((t, i) => [t.uid, i]));
   vis.forEach((t, i) => {
     const y = i * RH; const x1 = X(t.startDn), x2 = X(t.finishDn + 1);
-    if (t.bsDn != null && t.bfDn != null) { if (t.bd === 0 || (t.ms && !t.sum)) { const bx = X(t.bfDn + 1); bars += `<path d="M${bx} ${y + 20} l4 4 -4 4 -4 -4z" fill="var(--base)"/>`; } else bars += `<rect x="${X(t.bsDn)}" y="${y + 21}" width="${Math.max(2, X(t.bfDn + 1) - X(t.bsDn))}" height="4" rx="1" fill="var(--base)"/>`; }
+    if (t.bsDn != null && t.bfDn != null) { if (!t.sum && (t.bd === 0 || t.ms)) { const bx = X(t.bfDn + 1); bars += `<path d="M${bx} ${y + 20} l4 4 -4 4 -4 -4z" fill="var(--base)"/>`; } else bars += `<rect x="${X(t.bsDn)}" y="${y + 21}" width="${Math.max(2, X(t.bfDn + 1) - X(t.bsDn))}" height="4" rx="1" fill="var(--base)"/>`; }
     const col = t.crit ? 'var(--crit)' : 'var(--bar)', pcol = t.crit ? 'var(--crit-prog)' : 'var(--bar-prog)';
     if (t.sum) {
       bars += `<g class="sumb" data-uid="${H(t.uid)}"><rect x="${x1}" y="${y + 8}" width="${Math.max(2, x2 - x1)}" height="6" fill="var(--sum)"/><path d="M${x1} ${y + 8}h6l-6 8z M${x2} ${y + 8}h-6l6 8z" fill="var(--sum)"/>` +
@@ -924,14 +931,15 @@ function wireGantt() {
     const z = e.target.closest('[data-z]'); if (z) { ST.zoom = z.dataset.z; LS.set('zoom', ST.zoom); const gr = $('#gr'); const mid = gr ? ST.grange.a + (gr.scrollLeft + gr.clientWidth / 2) / PXD[$('[data-z][aria-pressed="true"]').dataset.z] : ST.statusDn; renderGantt(); scrollToDn(mid - $('#gr').clientWidth / 2 / PXD[ST.zoom]); return; }
     const b = e.target.closest('[data-g]'); if (!b) return; const g = b.dataset.g;
     if (g === 'add') addTask(false); else if (g === 'child') addTask(true); else if (g === 'in') indent(1); else if (g === 'out') indent(-1); else if (g === 'up') moveTask(-1); else if (g === 'down') moveTask(1);
-    else if (g === 'today') scrollToDn(ST.statusDn - 14);
+    else if (g === 'today') scrollHome(true); else if (g === 'start') scrollToDn(ST.sched.startDn - 7);
     else if (g === 'fold') { if (ST.collapsed.size) ST.collapsed.clear(); else ST.tasks.forEach(t => { if (t.sum && t.lvl >= 2) ST.collapsed.add(t.uid); }); LS.set('collapsed', JSON.stringify([...ST.collapsed])); renderGantt(); }
     else if (g === 'base') modal('Tetapkan baseline?', `<p style="margin:0">Tanggal mulai, selesai, dan durasi semua aktivitas saat ini akan disimpan sebagai <b>baseline</b> (rencana acuan). Baseline lama akan ditimpa, dan kurva S rencana di dashboard akan berubah mengikuti baseline baru.</p>`, [{ label: 'Batal' }, { label: 'Tetapkan baseline', cls: 'pri', fn: () => { pushUndo(); setBaseline(false); commit(); toast('Baseline diperbarui.'); } }]);
     else if (g === 'undo') undo(); else if (g === 'set') openSettings();
   };
   $('#glb').onclick = e => {
     const tg = e.target.closest('[data-tog]'); if (tg) { const u = tg.dataset.tog; ST.collapsed.has(u) ? ST.collapsed.delete(u) : ST.collapsed.add(u); LS.set('collapsed', JSON.stringify([...ST.collapsed])); renderGantt(); return; }
-    const r = e.target.closest('.r[data-uid]'); if (r) { ST.sel = r.dataset.uid === ST.sel ? null : r.dataset.uid; renderGantt(); }
+    const r = e.target.closest('.r[data-uid]'); if (r) { ST.sel = r.dataset.uid === ST.sel ? null : r.dataset.uid; renderGantt();
+      const t = ST.sel && ST.byUid.get(ST.sel); const gr = $('#gr'); if (t && gr) { const px = PXD[ST.zoom], x1 = (t.startDn - ST.grange.a) * px, x2 = (t.finishDn + 1 - ST.grange.a) * px; if (x2 < gr.scrollLeft + 20 || x1 > gr.scrollLeft + gr.clientWidth - 60) gr.scrollLeft = Math.max(0, x1 - 80); } }
   };
   // Splitter
   const sp = $('#split'); sp.onpointerdown = e => { const g = $('#gantt'); const x0 = e.clientX, w0 = $('.gl').getBoundingClientRect().width; sp.setPointerCapture(e.pointerId);
