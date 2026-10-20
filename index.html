@@ -99,8 +99,11 @@ main{flex:1;min-height:0;position:relative}
 .r>div{padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
 .r .c-n{font-family:var(--f-mono);font-size:11.5px;color:var(--faint);text-align:right}
 .r .c-w{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
-.r .c-d,.r .c-s,.r .c-f,.r .c-p,.r .c-pc{font-family:var(--f-mono);font-size:11.5px;font-variant-numeric:tabular-nums}
-.r .c-pc{text-align:right}
+.r .c-d,.r .c-s,.r .c-f,.r .c-p,.r .c-pc,.r .c-b,.r .c-v{font-family:var(--f-mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+.r .c-pc,.r .c-b,.r .c-v{text-align:right}
+.r .c-u{font-size:12px;color:var(--muted)}
+.gl>.gh{overflow:hidden}
+.gl .r{min-width:754px}
 .r.sum{font-weight:600} .r.sum .c-name{font-family:var(--f-display);font-stretch:90%;font-size:13px;letter-spacing:.01em}
 .r.sel{background:var(--accent-soft)} .r:hover:not(.sel){background:var(--row-alt)}
 .r.crit .c-name{color:var(--crit)}
@@ -221,8 +224,8 @@ body.role-guest .save,body.role-pending .save{display:none}
 @media (max-width:1000px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .dgrid,.pgrid{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:720px){
   .gantt{grid-template-columns:var(--lws,210px) 5px minmax(0,1fr)}
-  .r .c-w,.r .c-d,.r .c-s,.r .c-f,.r .c-p{display:none}
-  .r{grid-template-columns:30px minmax(0,1fr) 42px!important;min-width:0}
+  .r .c-w,.r .c-d,.r .c-s,.r .c-f,.r .c-p,.r .c-b,.r .c-v,.r .c-u{display:none}
+  .r,.gl .r{grid-template-columns:30px minmax(0,1fr) 42px!important;min-width:0}
   .legend{display:none}
   .kpi .v{font-size:24px}
   .tabs button{padding:6px 10px}
@@ -823,10 +826,10 @@ function ganttRange() {
   else { a -= ((dnDow(a) + 6) % 7) + 7; b += 21; }
   return { a, b };
 }
-const COLS = '34px 52px minmax(130px,1fr) 58px 84px 84px 78px 46px';
+const COLS = '34px 52px minmax(130px,1fr) 58px 84px 84px 78px 46px 60px 72px 66px';
 function renderGantt() {
   const main = $('#main'); const keep = ST.resetScroll ? null : $('.gr', main); ST.resetScroll = false; const sx = keep ? keep.scrollLeft : null, sy = keep ? keep.scrollTop : 0;
-  const lw = LS.get('lw') || '640px';
+  const lw = LS.get('lw') || '820px';
   main.innerHTML = `<div class="view">
     <div class="tb">
       <button class="btn edit-only" data-g="add" title="Tambah aktivitas di bawah yang dipilih">+ Aktivitas</button>
@@ -846,7 +849,7 @@ function renderGantt() {
       <div class="legend"><span><i style="background:var(--bar)"></i>Aktivitas</span><span><i style="background:var(--crit)"></i>Jalur kritis</span><span><i style="background:var(--base);height:4px"></i>Baseline</span><span><i style="background:var(--today);width:2px;height:12px"></i>Tgl status</span></div>
     </div>
     <div class="gantt" id="gantt" style="--lw:${H(lw)}">
-      <div class="gl"><div class="gh"><div class="r head" style="--cols:${COLS}"><div class="c-n">#</div><div class="c-w">WBS</div><div class="c-name">Nama aktivitas</div><div class="c-d">Durasi</div><div class="c-s">Mulai</div><div class="c-f">Selesai</div><div class="c-p">Pred.</div><div class="c-pc">%</div></div></div><div class="glb" id="glb"></div></div>
+      <div class="gl"><div class="gh"><div class="r head" style="--cols:${COLS}"><div class="c-n">#</div><div class="c-w">WBS</div><div class="c-name">Nama aktivitas</div><div class="c-d">Durasi</div><div class="c-s">Mulai</div><div class="c-f">Selesai</div><div class="c-p">Pred.</div><div class="c-pc">%</div><div class="c-b">Bobot</div><div class="c-v">Volume</div><div class="c-u">Satuan</div></div></div><div class="glb" id="glb"></div></div>
       <div class="split" id="split" title="Seret untuk mengubah lebar"></div>
       <div class="gr" id="gr"><div class="gh" id="ghead"></div><div id="gbody"></div></div>
     </div>
@@ -857,6 +860,7 @@ function renderGantt() {
   if (sx != null) { gr.scrollLeft = sx; gr.scrollTop = sy; } else scrollHome();
   glb.scrollTop = gr.scrollTop;
   let lock = 0; gr.addEventListener('scroll', () => { if (lock === 2) { lock = 0; return; } lock = 1; glb.scrollTop = gr.scrollTop; });
+  const glh = $('.gl>.gh'); glb.addEventListener('scroll', () => { glh.scrollLeft = glb.scrollLeft; });
   glb.addEventListener('scroll', () => { if (lock === 1) { lock = 0; return; } lock = 2; gr.scrollTop = glb.scrollTop; });
   wireGantt();
   if (ST.sel) wireDrawer();
@@ -877,7 +881,7 @@ function drawGantt() {
       <div class="c-n">${t.id}</div><div class="c-w">${t.wbs}</div>
       <div class="c-name" style="padding-left:${(t.lvl - 1) * 14 + 4}px">${t.sum ? `<button class="car ${ST.collapsed.has(t.uid) ? 'closed' : ''}" data-tog="${H(t.uid)}" aria-label="Buka/tutup">${ICON.car}</button>` : '<span style="width:16px;flex:none"></span>'}<span style="overflow:hidden;text-overflow:ellipsis">${t.ms ? '◆ ' : ''}${H(t.name)}</span></div>
       <div class="c-d">${t.ms ? '0' : nf(t.calDur, t.calDur % 1 ? 1 : 0)} h</div><div class="c-s">${fmtDn(t.startDn)}</div><div class="c-f">${fmtDn(t.finishDn)}</div>
-      <div class="c-p" title="${H(predsToText(t, ST.byUid))}">${H(predsToText(t, ST.byUid))}</div><div class="c-pc">${pct}%</div></div>`;
+      <div class="c-p" title="${H(predsToText(t, ST.byUid))}">${H(predsToText(t, ST.byUid))}</div><div class="c-pc">${pct}%</div><div class="c-b">${nf(t.bobot || 0, 2)}%</div><div class="c-v">${!t.sum && t.qty ? nf(t.qty, t.qty % 1 ? 2 : 0) : ''}</div><div class="c-u" title="${H(t.sum ? '' : t.unit || '')}">${t.sum ? '' : H(t.unit || '')}</div></div>`;
   }).join('') + `<div style="height:56px"></div>`;
   // Header skala
   let top = '', bot = '';
