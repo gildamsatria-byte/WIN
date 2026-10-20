@@ -248,6 +248,7 @@ body.role-guest .save,body.role-pending .save{display:none}
     <span class="save" id="save"><i></i><span>–</span></span>
     <button class="btn admin-only" id="bImport"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5 7m3 3 3-3M2.5 11v2.5h11V11"/></svg>Impor XML</button>
     <button class="btn admin-only" id="bExport"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10V2m0 0L5 5m3-3 3 3M2.5 11v2.5h11V11"/></svg>Ekspor</button>
+    <button class="btn ghost danger admin-only" id="bWipe" title="Hapus semua data dan mulai dari halaman kosong"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 9h5.8l.6-9M7 7v4.5M9 7v4.5"/></svg>Hapus</button>
   </div>
 </header>
 <div id="banner" class="banner" hidden></div>
@@ -563,7 +564,7 @@ async function init() {
     setSave('busy', 'Menyambung…');
     db.collection('progress').onSnapshot(snap => { const p = {}; snap.docs.forEach(d => { const x = d.data(); p[d.id] = { uid: d.id, e: { ...(x.e || {}) } }; }); ST.prog = p; if (ST.sched) { computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); render(); } }, e => console.error(e));
     db.doc('sched/meta').onSnapshot(snap => {
-      if (!snap.exists) { if (ST.mode === 'loading') { ST.mode = 'empty'; setSave('', 'Siap'); render(); } return; }
+      if (!snap.exists) { if (ST.mode === 'loading') { ST.mode = 'empty'; setSave('', 'Siap'); render(); } else if (ST.mode === 'ready' && !ST.wiping && !saving) { resetLocalState(); render(); } return; }
       const m = snap.data(); if (m.rev === ST.rev) return; if (saving || saveTimer && ST.mode === 'ready' && $('#save').classList.contains('busy')) return;
       fetchSched(m);
     }, e => { console.error(e); setSave('err', 'Terputus'); });
@@ -572,6 +573,7 @@ async function init() {
     try { ST.team = JSON.parse(LS.get('team') || '{}'); } catch (e) { ST.team = {}; }
     const s = LS.get('sched');
     if (s) { try { ST.prog = JSON.parse(LS.get('prog') || '{}'); loadSchedule(JSON.parse(s)); return; } catch (e) {} }
+    if (LS.get('init')) { ST.mode = 'empty'; render(); return; }
     ST.prog = JSON.parse(JSON.stringify(SAMPLE.prog)); loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks });
   }
 }
@@ -626,17 +628,73 @@ function render() {
 function emptyHtml() {
   return `<div class="view scroll"><div class="wrap"><div class="card" style="max-width:620px;margin:40px auto"><div class="empty">
     <h3>Belum ada master schedule</h3><p>Ekspor jadwal dari MS Project dengan <b>File › Save As › XML Format (*.xml)</b>, lalu impor di sini. Aktivitas, WBS, durasi, dependency, dan baseline akan terbaca otomatis.</p>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn pri edit-only" data-act="import">Impor XML</button><button class="btn edit-only" data-act="sample">Muat proyek contoh</button></div></div></div></div></div>`;
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn pri edit-only" data-act="import">Impor XML</button><button class="btn edit-only" data-act="blank">Buat jadwal baru</button><button class="btn ghost edit-only" data-act="sample">Muat proyek contoh</button></div></div></div></div></div>`;
 }
 
 document.addEventListener('click', e => {
   const tab = e.target.closest('.tabs button'); if (tab) { ST.view = tab.dataset.v; ST.sel = null; render(); return; }
   const a = e.target.closest('[data-act]'); if (!a) return; const act = a.dataset.act;
   if (act === 'import') openImport();
+  else if (act === 'blank') openBlank();
+  else if (act === 'wipe') openWipe();
   else if (act === 'sample') { const sp = JSON.parse(JSON.stringify(SAMPLE.prog)); ST.prog = {}; loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks }); queueSave(); (async () => { for (const u of Object.keys(sp)) await writeProg(u, sp[u].e).catch(handleDbErr); recalc(); render(); })(); }
 });
 $('#bImport').onclick = () => openImport();
 $('#bExport').onclick = () => openExport();
+$('#bWipe').onclick = () => openWipe();
+
+/* ---------- Hapus semua / mulai kosong ---------- */
+function resetLocalState() {
+  clearTimeout(saveTimer); saveTimer = null; saveAgain = false;
+  ST.proj = null; ST.tasks = []; ST.prog = {}; ST.sched = null; ST.byUid = new Map(); ST.rev = null; ST.chunks = 0;
+  ST.undo = []; ST.sel = null; ST.pgGroup = null; ST.collapsed = new Set(); ST.mode = 'empty'; LS.set('collapsed', '[]');
+}
+function openWipe() {
+  if (!isAdmin()) return;
+  const nT = ST.tasks.length, nE = Object.values(ST.prog).reduce((s, d) => s + Object.keys(d.e || {}).length, 0), nP = Object.keys(ST.team).length;
+  modal('Hapus semua data?', `<p style="margin:0">Aplikasi akan kembali ke halaman kosong. Data berikut <b>dihapus permanen</b> dan tidak bisa diurungkan:</p>
+    <ul style="margin:0;padding-left:20px;line-height:1.7"><li>Master schedule: ${nT} aktivitas, baseline, dan dependency</li><li>Semua entri progres pelaksana: ${nE} entri</li></ul>
+    <label class="chk"><input type="checkbox" id="wTeam"> Hapus juga daftar pelaksana (${nP} orang)${ST.reqs.length ? ' dan permintaan pendaftaran' : ''}</label>
+    ${nT ? '<div class="hint" style="font-size:12.5px;color:var(--muted)">Saran: simpan cadangan dulu lewat <b>Ekspor</b> (XML jadwal dan CSV progres).</div>' : ''}
+    <div class="fld"><label for="wConfirm">Ketik HAPUS untuk konfirmasi</label><input id="wConfirm" autocomplete="off" placeholder="HAPUS"></div>`,
+    [{ label: 'Batal' }, { label: 'Hapus semua data', cls: 'pri wipe', fn: mb => {
+      if ($('#wConfirm', mb).value.trim().toUpperCase() !== 'HAPUS') { $('#wConfirm', mb).focus(); toast('Ketik HAPUS untuk konfirmasi.'); return false; }
+      wipeAll($('#wTeam', mb).checked);
+    } }], mb => { const b = $('.wipe', mb); b.style.background = 'var(--bad)'; b.style.borderColor = 'var(--bad)'; b.style.color = '#fff'; });
+}
+async function wipeAll(team) {
+  ST.wiping = true; const progIds = Object.keys(ST.prog); const chunks = Math.max(ST.chunks || 1, 1);
+  resetLocalState(); if (team) { ST.team = {}; }
+  ST.view = 'gantt'; render(); setSave('busy', 'Menghapus…');
+  try {
+    if (!db) { LS.del('sched'); LS.del('prog'); LS.set('init', '1'); if (team) LS.del('team'); }
+    else {
+      await db.doc('sched/meta').delete();
+      for (let i = 0; i < chunks + 2; i++) await db.doc('sched/c' + i).delete();
+      const ps = await db.collection('progress').get(); const all = new Set([...progIds, ...ps.docs.map(d => d.id)]);
+      for (const u of all) await db.doc('progress/' + u).delete();
+      if (team) { await db.doc('team/pelaksana').delete(); for (const r of ST.reqs.slice()) await db.doc('requests/' + r.id).delete(); }
+    }
+    setSave(db ? '' : 'local', db ? 'Tersimpan' : 'Tersimpan di browser ini'); toast('Semua data dihapus. Mulai dengan impor XML atau buat jadwal baru.');
+  } catch (e) { handleDbErr(e); }
+  ST.wiping = false; ST.prog = {}; render();
+}
+function openBlank() {
+  if (!isAdmin()) return;
+  const wdDef = [false, true, true, true, true, true, true];
+  modal('Buat jadwal baru', `<div class="fld"><label for="bName">Nama proyek</label><input id="bName" placeholder="mis. Pembangunan Gudang Tahap 2" maxlength="120"></div>
+    <div class="fld"><label for="bStart">Tanggal mulai</label><input id="bStart" type="date" value="${dnToIso(TODAY)}"></div>
+    <div class="fld"><span class="lbl">Hari kerja</span><div class="wdays">${[1, 2, 3, 4, 5, 6, 0].map(i => `<label><input type="checkbox" data-wd="${i}" ${wdDef[i] ? 'checked' : ''}> ${DOWS[i]}</label>`).join('')}</div></div>
+    <div class="hint" style="font-size:12.5px;color:var(--muted)">Jadwal dimulai dengan satu aktivitas. Tambahkan aktivitas, sub-aktivitas, dan predecessor dari tab Jadwal, lalu tekan <b>Tetapkan baseline</b>.</div>`,
+    [{ label: 'Batal' }, { label: 'Buat jadwal', cls: 'pri', fn: mb => {
+      const name = $('#bName', mb).value.trim(); if (!name) { $('#bName', mb).focus(); toast('Nama proyek wajib diisi.'); return false; }
+      const start = $('#bStart', mb).value || dnToIso(TODAY); const wd = [false, false, false, false, false, false, false]; $$('[data-wd]', mb).forEach(c => wd[+c.dataset.wd] = c.checked);
+      if (!wd.some(Boolean)) { toast('Pilih minimal satu hari kerja.'); return false; }
+      ST.prog = {}; ST.undo = [];
+      loadSchedule({ proj: { name, start, mpd: 480, workdays: wd, weightMode: 'cost' }, tasks: [{ uid: '1', name: 'Pekerjaan Persiapan', lvl: 1, dur: 5, ms: false, snet: start, preds: [], unit: '', qty: 0, cost: 0, w: 0, pct0: 0, bs: null, bf: null, bd: null }] });
+      ST.view = 'gantt'; ST.sel = '1'; render(); queueSave(); toast('Jadwal baru dibuat.');
+    } }]);
+}
 window.addEventListener('resize', () => {});
 
 /* ---------- Impor ---------- */
