@@ -1069,7 +1069,7 @@ function renderProg() {
         <div class="bd">
           <div class="pform">
             <div class="fld grow"><label for="pGroup">Kelompok pekerjaan</label><select id="pGroup">${sums.map(s => `<option value="${H(s.uid)}" ${s.uid === ST.pgGroup ? 'selected' : ''}>${' '.repeat(s.lvl - 1)}${s.wbs} ${H(s.name)}</option>`).join('')}${sums.length ? '' : '<option value="__all">Semua aktivitas</option>'}</select></div>
-            <div class="fld"><label for="pDate">Tanggal</label><input id="pDate" type="date" value="${ST.pgDate}" max="${dnToIso(TODAY + 7)}"></div>
+            <div class="fld"><label for="pDate">Tanggal</label><input id="pDate" type="date" value="${ST.pgDate}" max="${dnToIso(TODAY)}"></div>
             <div class="fld"><span class="lbl">Periode</span><div class="seg" role="group"><button data-per="D" aria-pressed="${ST.pgPer === 'D'}">Harian</button><button data-per="W" aria-pressed="${ST.pgPer === 'W'}">Mingguan</button></div></div>
           </div>
           <p class="hint" style="margin:10px 0 0;color:var(--muted);font-size:12.5px">${ST.pgPer === 'W' ? `Minggu ke-${wk} proyek (${fmtDn(wkA, false)} – ${fmtDn(wkA + 6)}). Entri dicatat pada tanggal ${fmtDn(dn)}.` : `${DOWS[dnDow(dn)]}, ${fmtDn(dn)} · minggu ke-${wk} proyek.`}${ST.sched.cal.isWork(dn) ? '' : ' <b>Tanggal ini bukan hari kerja di kalender proyek.</b>'}</p>
@@ -1094,7 +1094,7 @@ function renderProg() {
     </div></div></div>`;
   $('#pGroup').onchange = e => { ST.pgGroup = e.target.value; renderProg(); };
   $('#pDate').onchange = e => { ST.pgDate = e.target.value || dnToIso(TODAY); renderProg(); };
-  $$('[data-per]').forEach(b => b.onclick = () => { ST.pgPer = b.dataset.per; if (ST.pgPer === 'W') { const d = isoToDn(ST.pgDate); const sat = d + ((6 - dnDow(d) + 7) % 7); ST.pgDate = dnToIso(Math.min(sat, TODAY + 6)); } renderProg(); });
+  $$('[data-per]').forEach(b => b.onclick = () => { ST.pgPer = b.dataset.per; if (ST.pgPer === 'W') { const d = isoToDn(ST.pgDate); const sat = d + ((6 - dnDow(d) + 7) % 7); ST.pgDate = dnToIso(Math.min(sat, TODAY)); } renderProg(); });
   $$('[data-hm]').forEach(b => b.onclick = () => { ST.histMine = b.dataset.hm === '1'; renderProg(); });
   const sv = $('#pSave'); if (sv) sv.onclick = saveProg;
   $('.hist').onclick = e => { const b = e.target.closest('[data-del]'); if (!b) return; const h = b.closest('.hi');
