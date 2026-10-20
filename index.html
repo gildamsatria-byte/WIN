@@ -749,12 +749,14 @@ function openExport() {
   modal('Ekspor', `<p style="margin:0">Pilih file yang ingin disimpan.</p>
     <div class="fld"><label class="chk"><input type="radio" name="ex" value="xml" checked> Jadwal MS Project (.xml) – aktivitas, dependency, baseline, % selesai per ${fmtDn(ST.statusDn)}</label>
     <label class="chk"><input type="radio" name="ex" value="csv"> Rekap progres harian/mingguan (.csv)</label>
-    <label class="chk"><input type="radio" name="ex" value="wbs"> Tabel kemajuan per aktivitas (.csv)</label></div>
+    <label class="chk"><input type="radio" name="ex" value="wbs"> Tabel kemajuan per aktivitas (.csv)</label>
+    <label class="chk"><input type="radio" name="ex" value="pdf"> Laporan mingguan (.pdf)</label></div>
     ${dl ? '' : '<div class="hint">Unduhan tidak tersedia di tampilan ini. Isi file akan ditampilkan agar bisa disalin.</div>'}`,
     [{ label: 'Batal' }, { label: 'Simpan file', cls: 'pri', fn: mb => { doExport($('input[name="ex"]:checked', mb).value); } }]);
 }
 function csvCell(v) { const s = String(v == null ? '' : v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
 async function doExport(kind) {
+  if (kind === 'pdf') { setTimeout(openReport, 60); return; }
   let name, data; const safe = ST.proj.name.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'proyek';
   if (kind === 'xml') { name = safe + '.xml'; data = exportMSPDI(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); }
   else if (kind === 'csv') {
@@ -1239,7 +1241,8 @@ function renderDash() {
   $('#main').innerHTML = `<div class="view scroll"><div class="wrap">
     <div class="dhead"><h2>Kemajuan terhadap baseline<small>${H(ST.proj.name)} · baseline ${fmtDn(bS)} – ${fmtDn(bF)} · ${bDur} hari kerja</small></h2>
       <div class="fld"><label for="dDate">Tanggal status</label><input id="dDate" type="date" value="${dnToIso(sd)}"></div>
-      <span class="chip ${sc}" style="font-size:12.5px;padding:5px 10px">${sl}</span></div>
+      <span class="chip ${sc}" style="font-size:12.5px;padding:5px 10px">${sl}</span>
+      <button class="btn pri" id="dReport"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1.5h5.5L13 5v9.5H4z M9.5 1.5V5H13 M6.5 8.5h4 M6.5 11h4"/></svg>Laporan mingguan PDF</button></div>
     <div class="kpis">
       <div class="kpi"><div class="k">Rencana (baseline)</div><div class="v">${pc(cp.plan, 2)}</div><div class="s">kumulatif s.d. ${fmtDn(sd)}</div></div>
       <div class="kpi ${sc}"><div class="k">Realisasi</div><div class="v">${pc(cp.act, 2)}</div><div class="s">dari volume terpasang</div></div>
@@ -1263,6 +1266,7 @@ function renderDash() {
       ${late.length ? `<div class="tw"><table class="t"><thead><tr><th>Item</th><th>Kelompok</th><th class="n">Volume</th><th class="n">Rencana</th><th class="n">Realisasi</th><th class="n">Dampak ke proyek</th><th>Float</th></tr></thead><tbody>
       ${late.map(({ t, gap }) => `<tr><td style="font-weight:500">${H(t.name)}</td><td style="color:var(--muted)">${H(t.parent ? t.parent.name : '')}</td><td class="n mono">${t.qty ? nf(actualQty(ST.prog, t.uid, sd), 0) + ' / ' + nf(t.qty, 0) + ' ' + H(t.unit) : '–'}</td><td class="n">${pc(t.plan, 0)}</td><td class="n">${pc(t.act, 0)}</td><td class="n" style="color:var(--bad)">−${nf(gap, 2)} pp</td><td>${t.crit ? '<span class="chip crit">Kritis</span>' : `<span class="chip">${nf(t.float, 0)} hari</span>`}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Tidak ada item yang tertinggal lebih dari 5 poin.</div>'}</section>
   </div></div>`;
+  $('#dReport').onclick = () => openReport();
   $('#dDate').onchange = e => { const d = isoToDn(e.target.value); ST.statusDn = d || TODAY; recalc(); renderDash(); };
   drawCharts();
 }
@@ -1303,6 +1307,244 @@ function drawCharts() {
 }
 
 init();
+
+/* ===== LAPORAN MINGGUAN PDF (kanvas -> JPEG -> PDF, tanpa pustaka luar) ===== */
+const MONTHS_L = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+function fmtLong(dn) { const d = new Date(dn * DAY); return d.getUTCDate() + ' ' + MONTHS_L[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); }
+function weekList() {
+  const s0 = ST.sched.startDn - ((dnDow(ST.sched.startDn) + 6) % 7);
+  const leaves = ST.tasks.filter(t => !t.sum); const bF = Math.max(...leaves.map(t => t.bfDn ?? t.finishDn), ST.sched.finishDn);
+  const last = Math.min(TODAY, bF + 6); const out = [];
+  for (let a = s0, n = 1; a <= last; a += 7, n++) out.push({ n, a, e: a + 6 });
+  if (!out.length) out.push({ n: 1, a: s0, e: s0 + 6 });
+  return out;
+}
+function openReport() {
+  if (!ST.sched) return; const wl = weekList(); const def = wl[wl.length - 1];
+  const me = isAdmin() ? '' : (myMember() || {}).label || '';
+  modal('Laporan mingguan (PDF)', `
+    <div class="fld"><label for="rwWeek">Minggu laporan</label><select id="rwWeek">${wl.slice().reverse().map(w => `<option value="${w.n}" ${w === def ? 'selected' : ''}>Minggu ke-${w.n} · ${fmtDn(w.a, false)} – ${fmtDn(w.e)}${w.e > TODAY ? ' (berjalan)' : ''}</option>`).join('')}</select></div>
+    <div class="grid2"><div class="fld"><label for="rwBy">Disusun oleh</label><input id="rwBy" value="${H(LS.get('rwBy') || me)}" placeholder="Nama kepala lapangan"></div>
+    <div class="fld"><label for="rwRole">Jabatan</label><input id="rwRole" value="${H(LS.get('rwRole') || 'Kepala Lapangan')}"></div></div>
+    <div class="fld"><span class="lbl">Isi laporan</span>
+      <label class="chk"><input type="checkbox" id="rwDetail" checked> Rincian volume per item pekerjaan</label>
+      <label class="chk"><input type="checkbox" id="rwNotes" checked> Catatan lapangan dari pelaksana</label>
+      <label class="chk"><input type="checkbox" id="rwSign" checked> Kolom tanda tangan</label></div>
+    <div class="hint" style="font-size:12.5px;color:var(--muted)">Isi: ringkasan kemajuan, Kurva S, rekap per kelompok (rencana vs realisasi minggu lalu, minggu ini, s.d. minggu ini), item tertinggal, dan catatan lapangan.</div>
+    <div id="rwMsg" class="hint"></div>`,
+    [{ label: 'Batal' }, { label: 'Buat PDF', cls: 'pri', fn: mb => {
+      const w = wl.find(x => x.n === +$('#rwWeek', mb).value); const opt = { by: $('#rwBy', mb).value.trim(), role: $('#rwRole', mb).value.trim(), detail: $('#rwDetail', mb).checked, notes: $('#rwNotes', mb).checked, sign: $('#rwSign', mb).checked };
+      LS.set('rwBy', opt.by); LS.set('rwRole', opt.role);
+      const b = $('.md footer .pri', mb); b.disabled = true; b.textContent = 'Menyusun PDF…';
+      setTimeout(() => makeWeeklyPdf(w, opt).then(() => closeModal(), e => { console.error(e); b.disabled = false; b.textContent = 'Buat PDF'; $('#rwMsg', mb).innerHTML = '<span style="color:var(--bad)">Gagal membuat PDF: ' + H(e.message || e) + '</span>'; }), 30);
+      return false;
+    } }]);
+}
+
+function weekData(w) {
+  const E = Math.min(w.e, Math.max(TODAY, w.a)); const P = w.a - 1;
+  const cp = computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, E); const W = cp.W || 1; const cal = ST.sched.cal;
+  const rows = new Map();
+  for (let i = ST.tasks.length - 1; i >= 0; i--) {
+    const t = ST.tasks[i]; let r;
+    if (!t.sum) {
+      const w_ = t._w / W;
+      r = { w: w_, pP: plannedFrac(t, P, cal) * w_, pN: plannedFrac(t, E, cal) * w_, aP: actualFrac(t, ST.prog, P) * w_, aN: actualFrac(t, ST.prog, E) * w_,
+        qP: actualQty(ST.prog, t.uid, P), qN: actualQty(ST.prog, t.uid, E) };
+    } else {
+      r = { w: 0, pP: 0, pN: 0, aP: 0, aN: 0 }; t.children.forEach(c => { const x = rows.get(c.uid); ['w', 'pP', 'pN', 'aP', 'aN'].forEach(k => r[k] += x[k]); });
+    }
+    rows.set(t.uid, r);
+  }
+  const tot = { w: 0, pP: 0, pN: 0, aP: 0, aN: 0 }; ST.tasks.filter(t => !t.sum).forEach(t => { const x = rows.get(t.uid); ['w', 'pP', 'pN', 'aP', 'aN'].forEach(k => tot[k] += x[k]); });
+  const pts = sCurve(ST.proj, ST.tasks, ST.sched, ST.prog, E);
+  computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, E);
+  const notes = []; ST.tasks.filter(t => !t.sum).forEach(t => entriesOf(ST.prog, t.uid).forEach(e => { const d = isoToDn(e.d); if (d >= w.a && d <= E) notes.push({ ...e, t }); }));
+  notes.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  return { E, P, rows, tot, pts, notes, cp };
+}
+
+/* --- kanvas halaman --- */
+const PDF_W = 595.28, PDF_H = 841.89, PDF_S = 2.5, PM = 36;
+const RC = { ink: '#18211F', muted: '#5D6A66', faint: '#8A9692', line: '#D5DDDA', line2: '#E8EDEB', fill: '#F1F5F3', accent: '#0D6B5F', accentSoft: '#DCEDE9', bad: '#C0402C', warn: '#B57E0E', good: '#2C8550', plan: '#7A8783' };
+const RF = { body: "'IBM Plex Sans','Inter',Arial,sans-serif", disp: "'Archivo','Inter',Arial,sans-serif", mono: "'IBM Plex Mono','DejaVu Sans Mono',Consolas,monospace" };
+class RPage {
+  constructor() { this.c = document.createElement('canvas'); this.c.width = Math.round(PDF_W * PDF_S); this.c.height = Math.round(PDF_H * PDF_S); this.x = this.c.getContext('2d'); this.x.fillStyle = '#fff'; this.x.fillRect(0, 0, this.c.width, this.c.height); this.x.scale(PDF_S, PDF_S); this.x.textBaseline = 'alphabetic'; }
+  font(size, weight = 400, fam = 'body') { this.x.font = `${weight} ${size}px ${RF[fam]}`; }
+  text(x, y, s, o = {}) { const c = this.x; this.font(o.size || 8.5, o.weight || 400, o.fam || 'body'); c.fillStyle = o.color || RC.ink; c.textAlign = o.align || 'left'; c.fillText(String(s), x, y); c.textAlign = 'left'; }
+  width(s, size, weight = 400, fam = 'body') { this.font(size, weight, fam); return this.x.measureText(String(s)).width; }
+  wrap(s, maxW, size, weight = 400, fam = 'body') {
+    this.font(size, weight, fam); const words = String(s).split(/\s+/); const lines = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (this.x.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; } }
+    if (cur) lines.push(cur);
+    return lines.map(l => { if (this.x.measureText(l).width <= maxW) return l; let k = l; while (k.length > 1 && this.x.measureText(k + '…').width > maxW) k = k.slice(0, -1); return k + '…'; });
+  }
+  rect(x, y, w, h, fill, stroke, lw = 0.6) { const c = this.x; if (fill) { c.fillStyle = fill; c.fillRect(x, y, w, h); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw; c.strokeRect(x, y, w, h); } }
+  line(x1, y1, x2, y2, col = RC.line, lw = 0.6, dash) { const c = this.x; c.strokeStyle = col; c.lineWidth = lw; c.setLineDash(dash || []); c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); c.setLineDash([]); }
+}
+async function makeWeeklyPdf(w, opt) {
+  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
+  const D = weekData(w); const proj = ST.proj; const pages = []; let pg, y;
+  const groups = groupsForDash(); const leaves = ST.tasks.filter(t => !t.sum);
+  const bS = Math.min(...leaves.map(t => t.bsDn ?? t.startDn)), bF = Math.max(...leaves.map(t => t.bfDn ?? t.finishDn));
+  const pct = (v, d = 2) => nf(v * 100, d);
+  const header = () => {
+    pg.rect(0, 0, PDF_W, 5, RC.accent);
+    pg.text(PM, 30, 'LAPORAN KEMAJUAN MINGGUAN', { size: 8, weight: 700, color: RC.accent });
+    pg.text(PM, 47, proj.name, { size: 15, weight: 700, fam: 'disp' });
+    pg.text(PDF_W - PM, 30, `MINGGU KE-${w.n}`, { size: 8, weight: 700, color: RC.accent, align: 'right' });
+    pg.text(PDF_W - PM, 47, `${fmtDn(w.a, false)} – ${fmtDn(w.e)}`, { size: 11, weight: 600, align: 'right', fam: 'disp' });
+    pg.line(PM, 58, PDF_W - PM, 58, RC.ink, 0.8);
+    y = 74;
+  };
+  const newPage = () => { pg = new RPage(); pages.push(pg); header(); };
+  const ensure = h => { if (y + h > PDF_H - 46) { newPage(); return true; } return false; };
+  const section = (title, sub) => { ensure(40); pg.text(PM, y + 10, title, { size: 11, weight: 700, fam: 'disp' }); if (sub) pg.text(PM + pg.width(title, 11, 700, 'disp') + 8, y + 10, sub, { size: 7.5, color: RC.muted }); y += 20; };
+
+  newPage();
+  // Info proyek
+  const info = [['Proyek', proj.name], ['Periode laporan', `${fmtLong(w.a)} – ${fmtLong(w.e)}`], ['Data s.d. tanggal', fmtLong(D.E) + (D.E < w.e ? ' (minggu berjalan)' : '')],
+    ['Baseline', `${fmtLong(bS)} – ${fmtLong(bF)}`], ['Jadwal saat ini selesai', fmtLong(ST.sched.finishDn) + (ST.sched.finishDn - bF ? ` (${ST.sched.finishDn - bF > 0 ? '+' : ''}${ST.sched.finishDn - bF} hari)` : '')], ['Disusun oleh', [opt.by, opt.role].filter(Boolean).join(' · ') || '–']];
+  const colW = (PDF_W - 2 * PM) / 2;
+  info.forEach((r, i) => { const cx = PM + (i % 2) * colW, cy = y + Math.floor(i / 2) * 15; pg.text(cx, cy + 8, r[0], { size: 7.5, color: RC.muted }); const l = pg.wrap(r[1], colW - 104, 8.5, 600)[0]; pg.text(cx + 100, cy + 8, l, { size: 8.5, weight: 600 }); });
+  y += 50;
+  // KPI
+  const t = D.tot; const dev = t.aN - t.pN; const spi = t.pN > 0 ? t.aN / t.pN : null; const wkP = t.pN - t.pP, wkA = t.aN - t.aP;
+  const sc = dev >= -0.005 ? RC.good : dev >= -0.05 ? RC.warn : RC.bad; const sl = dev >= -0.005 ? 'Sesuai rencana' : dev >= -0.05 ? 'Waspada' : 'Terlambat';
+  const kp = [['Rencana s.d. minggu ini', pct(t.pN) + '%', 'baseline kumulatif', RC.ink], ['Realisasi s.d. minggu ini', pct(t.aN) + '%', 'volume terpasang', sc], ['Deviasi', (dev >= 0 ? '+' : '') + pct(dev) + ' pp', sl, sc], ['SPI', spi == null ? '–' : nf(spi, 2), 'EV ÷ PV', spi == null ? RC.ink : spi >= 0.995 ? RC.good : spi >= 0.9 ? RC.warn : RC.bad]];
+  const kw = (PDF_W - 2 * PM - 3 * 8) / 4;
+  kp.forEach((k, i) => { const x = PM + i * (kw + 8); pg.rect(x, y, kw, 58, RC.fill); pg.rect(x, y, 3, 58, k[3]); pg.text(x + 10, y + 14, k[0].toUpperCase(), { size: 6.3, weight: 700, color: RC.muted }); pg.text(x + 10, y + 38, k[1], { size: 19, weight: 700, fam: 'disp', color: k[3] }); pg.text(x + 10, y + 50, k[2], { size: 7, color: RC.muted }); });
+  y += 68;
+  pg.text(PM, y + 8, `Progres minggu ini: rencana ${pct(wkP)}% · realisasi ${pct(wkA)}% (${wkA - wkP >= 0 ? '+' : ''}${pct(wkA - wkP)} pp). Progres minggu lalu s.d.: rencana ${pct(t.pP)}% · realisasi ${pct(t.aP)}%.`, { size: 8, color: RC.ink });
+  y += 22;
+
+  // Kurva S
+  section('Kurva S', 'rencana baseline vs realisasi kumulatif');
+  { const x0 = PM + 30, x1 = PDF_W - PM - 6, y0 = y + 4, h = 170, y1 = y0 + h; const pts = D.pts; const a = pts[0].dn - 6, b = pts[pts.length - 1].dn;
+    const X = d => x0 + (d - a) / (b - a || 1) * (x1 - x0), Y = v => y1 - v * h;
+    [0, .25, .5, .75, 1].forEach(v => { pg.line(x0, Y(v), x1, Y(v), RC.line2); pg.text(x0 - 5, Y(v) + 2.5, (v * 100) + '%', { size: 6.5, color: RC.muted, align: 'right', fam: 'mono' }); });
+    let lastX = -99; for (let d = a; d <= b; d++) { const dt = new Date(d * DAY); if (dt.getUTCDate() === 1 && X(d) - lastX > 30) { lastX = X(d); pg.line(X(d), y0, X(d), y1, RC.line2); pg.text(X(d) + 2, y1 + 10, MONTHS[dt.getUTCMonth()] + (dt.getUTCMonth() === 0 ? ' ' + String(dt.getUTCFullYear()).slice(2) : ''), { size: 6.5, color: RC.muted, fam: 'mono' }); } }
+    const c = pg.x; // area rencana
+    c.beginPath(); c.moveTo(X(a), Y(0)); pts.forEach(p => c.lineTo(X(p.dn), Y(p.plan))); c.lineTo(X(b), Y(0)); c.closePath(); c.fillStyle = 'rgba(122,135,131,.10)'; c.fill();
+    c.beginPath(); c.moveTo(X(a), Y(0)); pts.forEach(p => c.lineTo(X(p.dn), Y(p.plan))); c.strokeStyle = RC.plan; c.lineWidth = 1.2; c.setLineDash([4, 2.5]); c.stroke(); c.setLineDash([]);
+    const ap = pts.filter(p => p.act != null); if (ap.length) { c.beginPath(); c.moveTo(X(a), Y(0)); ap.forEach(p => c.lineTo(X(p.dn), Y(p.act))); c.strokeStyle = RC.accent; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+      const lp = ap[ap.length - 1]; c.beginPath(); c.arc(X(lp.dn), Y(lp.act), 3, 0, Math.PI * 2); c.fillStyle = RC.accent; c.fill(); }
+    pg.line(X(D.E), y0, X(D.E), y1, '#D97A22', 0.9, [3, 2]);
+    // pita minggu laporan
+    c.fillStyle = 'rgba(217,122,34,.08)'; c.fillRect(X(w.a), y0, Math.max(1, X(Math.min(w.e, b)) - X(w.a)), h);
+    const lg = y1 + 24; pg.line(PM + 30, lg - 3, PM + 50, lg - 3, RC.plan, 1.2, [4, 2.5]); pg.text(PM + 55, lg, 'Rencana baseline', { size: 7, color: RC.muted });
+    pg.line(PM + 140, lg - 3, PM + 160, lg - 3, RC.accent, 2); pg.text(PM + 165, lg, 'Realisasi', { size: 7, color: RC.muted });
+    pg.rect(PM + 215, lg - 7, 12, 7, 'rgba(217,122,34,.18)'); pg.text(PM + 232, lg, `Minggu ke-${w.n}`, { size: 7, color: RC.muted });
+    y = lg + 14; }
+
+  // Tabel
+  const table = (cols, rows, opts = {}) => {
+    const tw = PDF_W - 2 * PM; const fixed = cols.reduce((s, c) => s + (c.w || 0), 0); const flex = cols.find(c => !c.w); if (flex) flex.ww = tw - fixed; cols.forEach(c => c.ww = c.ww || c.w);
+    const hdrH = opts.group ? 26 : 16;
+    const drawHead = () => {
+      pg.rect(PM, y, tw, hdrH, RC.fill); let x = PM;
+      if (opts.group) { opts.group.forEach(g => { const gx = PM + cols.slice(0, g.from).reduce((s, c) => s + c.ww, 0), gw = cols.slice(g.from, g.to + 1).reduce((s, c) => s + c.ww, 0); pg.text(gx + gw / 2, y + 9, g.label, { size: 6.4, weight: 700, color: RC.muted, align: 'center' }); pg.line(gx + 3, y + 12, gx + gw - 3, y + 12, RC.line); }); }
+      cols.forEach(c => { const ty = y + hdrH - 5; const al = c.align || 'left'; pg.text(al === 'right' ? x + c.ww - 4 : x + 4, ty, c.h, { size: 6.4, weight: 700, color: RC.muted, align: al }); x += c.ww; });
+      y += hdrH; pg.line(PM, y, PM + tw, y, RC.ink, 0.6);
+    };
+    drawHead();
+    rows.forEach(r => {
+      const lines = cols.map(c => c.wrap ? pg.wrap(r.cells[cols.indexOf(c)], c.ww - 8 - (c === cols[1] ? (r.indent || 0) : 0), 7.5, r.bold ? 700 : 400) : null);
+      const nl = Math.max(1, ...lines.map(l => l ? Math.min(l.length, 3) : 1)); const rh = 6 + nl * 9.5;
+      if (ensure(rh + 2)) drawHead();
+      if (r.fill) pg.rect(PM, y, tw, rh, r.fill);
+      let x = PM; cols.forEach((c, i) => {
+        const v = r.cells[i]; const al = c.align || 'left'; const col = (r.colors && r.colors[i]) || (r.bold ? RC.ink : RC.ink);
+        if (lines[i]) lines[i].slice(0, 3).forEach((ln, k) => pg.text(x + 4 + (i === 1 ? (r.indent || 0) : 0), y + 11 + k * 9.5, ln, { size: 7.5, weight: r.bold ? 700 : 400, color: col }));
+        else pg.text(al === 'right' ? x + c.ww - 4 : x + 4, y + 11, v == null ? '' : v, { size: 7.2, weight: r.bold ? 700 : 400, color: col, align: al, fam: c.mono ? 'mono' : 'body' });
+        x += c.ww; });
+      y += rh; pg.line(PM, y, PM + tw, y, RC.line2);
+    });
+    if (opts.total) { const r = opts.total; ensure(18); pg.rect(PM, y, tw, 16, RC.accentSoft); let x = PM; cols.forEach((c, i) => { const al = c.align || 'left'; pg.text(al === 'right' ? x + c.ww - 4 : x + 4, y + 11, r[i] == null ? '' : r[i], { size: 7.4, weight: 700, align: al, fam: c.mono && i > 1 ? 'mono' : 'body' }); x += c.ww; }); y += 16; pg.line(PM, y, PM + tw, y, RC.ink, 0.6); }
+    y += 10;
+  };
+  const devColor = d => d < -0.05 ? RC.bad : d < -0.005 ? RC.warn : RC.good;
+  const sgn = v => (v >= 0 ? '+' : '') + nf(v * 100, 2);
+  // Rekap per kelompok
+  section('Rekap per kelompok pekerjaan', 'bobot dan kemajuan dalam % terhadap total proyek');
+  const rc = [{ h: 'WBS', w: 30, mono: true }, { h: 'Uraian pekerjaan', wrap: true }, { h: 'Bobot', w: 38, align: 'right', mono: true },
+    { h: 'Lalu', w: 38, align: 'right', mono: true }, { h: 'Mgg ini', w: 38, align: 'right', mono: true }, { h: 's.d. ini', w: 40, align: 'right', mono: true },
+    { h: 'Lalu', w: 38, align: 'right', mono: true }, { h: 'Mgg ini', w: 38, align: 'right', mono: true }, { h: 's.d. ini', w: 40, align: 'right', mono: true }, { h: 'Deviasi', w: 40, align: 'right', mono: true }];
+  table(rc, groups.map(g => { const r = D.rows.get(g.uid); const d = r.aN - r.pN; return { cells: [g.wbs, g.name, nf(r.w * 100, 2), nf(r.pP * 100, 2), nf((r.pN - r.pP) * 100, 2), nf(r.pN * 100, 2), nf(r.aP * 100, 2), nf((r.aN - r.aP) * 100, 2), nf(r.aN * 100, 2), sgn(d)], colors: { 9: devColor(d) } }; }),
+    { group: [{ label: 'RENCANA (%)', from: 3, to: 5 }, { label: 'REALISASI (%)', from: 6, to: 8 }], total: ['', 'Total proyek', '100,00', nf(t.pP * 100, 2), nf((t.pN - t.pP) * 100, 2), nf(t.pN * 100, 2), nf(t.aP * 100, 2), nf((t.aN - t.aP) * 100, 2), nf(t.aN * 100, 2), sgn(dev)] });
+
+  // Rincian item
+  if (opt.detail) {
+    newPage();
+    section('Rincian volume per item pekerjaan', `realisasi minggu ke-${w.n} dan kumulatif`);
+    const dc = [{ h: 'WBS', w: 34, mono: true }, { h: 'Uraian pekerjaan', wrap: true }, { h: 'Sat', w: 26 }, { h: 'Target', w: 44, align: 'right', mono: true },
+      { h: 'Mgg ini', w: 42, align: 'right', mono: true }, { h: 's.d. ini', w: 44, align: 'right', mono: true }, { h: 'Bobot %', w: 36, align: 'right', mono: true },
+      { h: 'Rencana', w: 38, align: 'right', mono: true }, { h: 'Realisasi', w: 40, align: 'right', mono: true }, { h: 'Dev', w: 36, align: 'right', mono: true }];
+    const fq = v => v ? nf(v, v % 1 ? 2 : 0) : '–';
+    table(dc, ST.tasks.map(tk => { const r = D.rows.get(tk.uid); const d = r.aN - r.pN; const ind = (tk.lvl - 1) * 7;
+      if (tk.sum) return { bold: true, fill: tk.lvl === 1 ? RC.fill : null, indent: ind, cells: [tk.wbs, tk.name, '', '', '', '', nf(r.w * 100, 2), nf(r.pN * 100, 2), nf(r.aN * 100, 2), sgn(d)], colors: { 9: devColor(d) } };
+      const pr = r.w ? r.pN / r.w : 0, ar = r.w ? r.aN / r.w : 0;
+      return { indent: ind, cells: [tk.wbs, tk.name, tk.unit || '', fq(tk.qty), fq(r.qN - r.qP), fq(r.qN), nf(r.w * 100, 2), pct(pr, 0) + '%', pct(ar, 0) + '%', (ar - pr >= 0 ? '+' : '') + nf((ar - pr) * 100, 0)], colors: { 4: r.qN - r.qP > 0 ? RC.accent : RC.faint, 9: devColor(ar - pr) } }; }),
+      { group: [{ label: 'VOLUME', from: 3, to: 5 }, { label: 'S.D. MINGGU INI', from: 7, to: 9 }] });
+    pg.text(PM, y, 'Rencana, Realisasi, Dev pada baris item = % dari volume item itu sendiri; pada baris kelompok = % terhadap total proyek.', { size: 6.5, color: RC.muted }); y += 16;
+  }
+  // Item tertinggal
+  const late = leaves.map(tk => { const r = D.rows.get(tk.uid); return { tk, r, gap: r.pN - r.aN }; }).filter(x => x.gap > 0.0005 && x.r.w > 0 && (x.r.pN - x.r.aN) / x.r.w > 0.05).sort((a, b) => b.gap - a.gap).slice(0, 10);
+  section('Item tertinggal dari rencana', 'selisih > 5% volume item, diurutkan menurut dampak ke total proyek');
+  if (late.length) table([{ h: 'WBS', w: 34, mono: true }, { h: 'Item pekerjaan', wrap: true }, { h: 'Kelompok', w: 120, wrap: true }, { h: 'Rencana', w: 44, align: 'right', mono: true }, { h: 'Realisasi', w: 44, align: 'right', mono: true }, { h: 'Dampak', w: 46, align: 'right', mono: true }, { h: 'Float', w: 44, align: 'right' }],
+    late.map(({ tk, r, gap }) => ({ cells: [tk.wbs, tk.name, tk.parent ? tk.parent.name : '', pct(r.pN / r.w, 0) + '%', pct(r.aN / r.w, 0) + '%', '−' + nf(gap * 100, 2) + ' pp', tk.crit ? 'Kritis' : nf(tk.float, 0) + ' hr'], colors: { 5: RC.bad, 6: tk.crit ? RC.bad : RC.muted } })));
+  else { pg.text(PM, y + 4, 'Tidak ada item yang tertinggal lebih dari 5% dari rencananya.', { size: 8, color: RC.muted }); y += 18; }
+  // Catatan lapangan
+  if (opt.notes) {
+    section('Catatan lapangan', `entri progres ${fmtDn(w.a, false)} – ${fmtDn(D.E)}`);
+    const ns = D.notes; if (ns.length) table([{ h: 'Tanggal', w: 46, mono: true }, { h: 'Item pekerjaan', wrap: true }, { h: 'Volume', w: 58, align: 'right', mono: true }, { h: 'Pelaksana', w: 86, wrap: true }, { h: 'Catatan', w: 150, wrap: true }],
+      ns.map(e => ({ cells: [fmtDn(isoToDn(e.d)), e.t.name, '+' + nf(e.q, e.q % 1 ? 2 : 0) + ' ' + (e.t.unit || ''), (e.by && byLabel(e.by)) || '–', (e.p === 'W' ? '[Mingguan] ' : '') + (e.n || '')] })));
+    else { pg.text(PM, y + 4, 'Belum ada entri progres pada minggu ini.', { size: 8, color: RC.muted }); y += 18; }
+  }
+  // Tanda tangan
+  if (opt.sign) {
+    ensure(110); y += 6; const bw = (PDF_W - 2 * PM - 2 * 14) / 3;
+    [['Dibuat oleh', opt.role || 'Kepala Lapangan', opt.by], ['Diperiksa oleh', 'Site Manager / Konsultan MK', ''], ['Disetujui oleh', 'Pemilik Proyek / PPK', '']].forEach((s, i) => {
+      const x = PM + i * (bw + 14); pg.text(x, y + 8, s[0] + ',', { size: 8, color: RC.muted }); pg.text(x, y + 19, s[1], { size: 8, weight: 600 });
+      pg.line(x, y + 78, x + bw, y + 78, RC.ink, 0.6); pg.text(x, y + 89, s[2] || 'Nama & tanggal', { size: 7.5, color: s[2] ? RC.ink : RC.faint, weight: s[2] ? 600 : 400 }); });
+    y += 100;
+  }
+  // Footer + nomor halaman
+  const stamp = new Date(); const ts = `${fmtLong(TODAY)} ${String(stamp.getHours()).padStart(2, '0')}:${String(stamp.getMinutes()).padStart(2, '0')}`;
+  pages.forEach((p, i) => { p.line(PM, PDF_H - 30, PDF_W - PM, PDF_H - 30, RC.line); p.text(PM, PDF_H - 19, `Kendali Jadwal Proyek · dibuat ${ts}`, { size: 6.8, color: RC.faint }); p.text(PDF_W - PM, PDF_H - 19, `Halaman ${i + 1} dari ${pages.length}`, { size: 6.8, color: RC.faint, align: 'right' }); });
+  // JPEG -> PDF
+  const jpgs = []; for (const p of pages) jpgs.push(await canvasJpeg(p.c));
+  const blob = buildPdf(jpgs, pages[0].c.width, pages[0].c.height, `Laporan Mingguan ${w.n} - ${proj.name}`);
+  const safe = proj.name.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'proyek';
+  await saveBlob(blob, `Laporan_Mingguan_${String(w.n).padStart(2, '0')}_${safe}.pdf`);
+  ST.lastPdf = pages; // untuk pratinjau/uji
+}
+function canvasJpeg(c) { return new Promise((res, rej) => c.toBlob(b => b ? b.arrayBuffer().then(a => res(new Uint8Array(a)), rej) : rej(new Error('Kanvas tidak bisa diekspor')), 'image/jpeg', 0.9)); }
+function buildPdf(jpgs, iw, ih, title) {
+  const enc = new TextEncoder(); const parts = []; const offs = []; let len = 0;
+  const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (id, f) => { offs[id] = len; push(id + ' 0 obj\n'); f(); push('\nendobj\n'); };
+  push('%PDF-1.4\n'); push(new Uint8Array([37, 226, 227, 207, 211, 10]));
+  const n = jpgs.length, infoId = 3 + 3 * n; const W = PDF_W.toFixed(2), Hh = PDF_H.toFixed(2);
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => push(`<< /Type /Pages /Kids [${jpgs.map((_, i) => (3 + 3 * i) + ' 0 R').join(' ')}] /Count ${n} >>`));
+  jpgs.forEach((j, i) => {
+    const p = 3 + 3 * i, c = p + 1, im = p + 2; const s = `q ${W} 0 0 ${Hh} 0 0 cm /Im${i} Do Q`;
+    obj(p, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${Hh}] /Resources << /XObject << /Im${i} ${im} 0 R >> >> /Contents ${c} 0 R >>`));
+    obj(c, () => { push(`<< /Length ${s.length} >>\nstream\n`); push(s); push('\nendstream'); });
+    obj(im, () => { push(`<< /Type /XObject /Subtype /Image /Width ${iw} /Height ${ih} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${j.length} >>\nstream\n`); push(j); push('\nendstream'); });
+  });
+  const ascii = String(title).normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/([()\\])/g, '\\$1');
+  obj(infoId, () => push(`<< /Title (${ascii}) /Producer (Kendali Jadwal Proyek) >>`));
+  const xref = len; push(`xref\n0 ${infoId + 1}\n0000000000 65535 f \n`);
+  for (let i = 1; i <= infoId; i++) push(String(offs[i]).padStart(10, '0') + ' 00000 n \n');
+  push(`trailer\n<< /Size ${infoId + 1} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+async function saveBlob(blob, name) {
+  if (dl) { try { await dl.save({ filename: name, data: blob }); toast('PDF disimpan: ' + name); return; } catch (e) { if (e && e.code === 'declined') return; console.error(e); if (window.claude) throw new Error('Unduhan ditolak oleh tampilan ini (' + (e.code || 'galat') + ').'); } }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); toast('PDF diunduh: ' + name);
+}
 
 </script>
 </body>
