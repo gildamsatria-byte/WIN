@@ -45,8 +45,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .brand{display:flex;flex-direction:column;min-width:0;flex:1 1 220px}
 .brand small{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .brand h1{margin:0;font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:19px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tabs{display:flex;gap:2px;background:var(--line2);padding:3px;border-radius:8px}
-.tabs button{border:0;background:transparent;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:500;color:var(--muted)}
+.tabs{display:flex;gap:2px;background:var(--line2);padding:3px;border-radius:8px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;white-space:nowrap;border:0;background:transparent;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:500;color:var(--muted)}
 .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
@@ -158,6 +159,54 @@ table.t tr.grp td{background:var(--row-alt);font-weight:600;font-size:12px;color
 .pbar>b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.55}
 
 /* Progres */
+.rs-row{border:1px solid var(--line);border-radius:var(--r);padding:8px;display:grid;grid-template-columns:96px minmax(0,1fr) 28px;gap:6px;background:var(--row-alt)}
+.rs-row .l2{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 74px minmax(0,1.25fr);gap:6px}
+.rs-row input,.rs-row select{width:100%;min-width:0;padding:5px 7px;font-size:12.5px}
+.rs-row .x{border:0;background:none;cursor:pointer;color:var(--faint);font-size:16px;padding:0}
+.rs-row .x:hover{color:var(--bad)}
+.rs-row .tot{grid-column:1/-1;font-size:11.5px;color:var(--muted);font-family:var(--f-mono)}
+.rtag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px}
+.rtag.M{background:var(--accent-soft);color:var(--accent)} .rtag.A{background:var(--warn-soft);color:var(--warn)}
+.rgrid{border-collapse:separate;border-spacing:0;font-size:12.5px;width:max-content;min-width:100%}
+.rgrid th,.rgrid td{padding:6px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.rgrid thead th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0}
+.rgrid thead th small{display:block;font-size:10px;letter-spacing:0;text-transform:none;font-weight:400;color:var(--faint)}
+.rgrid .st{position:sticky;left:0;background:var(--panel);z-index:1;min-width:220px;max-width:260px;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--line)}
+.rgrid thead .st{z-index:2}
+.rgrid td.n,.rgrid thead th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.rgrid td.b{text-align:right;font-family:var(--f-mono);font-size:11.5px;min-width:54px}
+.rgrid .now{box-shadow:inset 1px 0 0 var(--today),inset -1px 0 0 var(--today)}
+.rgrid thead .now{color:var(--today)}
+.rgrid tr.rr{cursor:pointer} .rgrid tr.rr:hover td{background:var(--row-alt)}
+.rgrid tr.rt td{font-size:12px;color:var(--muted)} .rgrid tr.rt td.st{padding-left:26px}
+.rgrid .car svg{transition:transform .15s;transform:rotate(-90deg)} .rgrid tr.open .car svg{transform:none}
+.rgrid thead th{text-align:left}
+.lagrid{border-collapse:separate;border-spacing:0;font-size:12.5px;width:max-content;min-width:100%}
+.lagrid th,.lagrid td{border-bottom:1px solid var(--line2);white-space:nowrap;padding:6px 8px;text-align:left}
+.lagrid thead th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--panel);position:sticky;top:0;z-index:2;border-bottom:1px solid var(--line)}
+.lagrid thead tr:nth-child(2) th{top:29px}
+.lagrid .st{position:sticky;left:0;background:var(--panel);z-index:1;min-width:230px;max-width:280px;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--line)}
+.lagrid thead .st{z-index:3}
+.lagrid td.n,.lagrid th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:11.5px}
+.lagrid td.dc,.lagrid th.dc{padding:0;width:15px;min-width:15px;text-align:center}
+.lagrid th.dc{font-family:var(--f-mono);font-size:9px;letter-spacing:0;font-weight:500;color:var(--faint)}
+.lagrid th.wk{text-align:center;border-left:1px solid var(--line);font-size:10.5px}
+.lagrid th.wk small{font-weight:400;letter-spacing:0;text-transform:none;color:var(--faint);margin-left:4px}
+.lagrid .wl{border-left:1px solid var(--line)}
+.lagrid td.dc.nw{background:var(--nonwork)}
+.lagrid td.dc i{display:block;height:12px;margin:0 -1px;background:var(--bar)}
+.lagrid td.dc i.c{background:var(--crit)} .lagrid td.dc i.ms{width:9px;height:9px;margin:0 auto;transform:rotate(45deg);background:var(--ink)}
+.lagrid td.dc.td{background:color-mix(in srgb,var(--today) 18%,transparent)}
+.lagrid tr.lg td{background:var(--row-alt);font-weight:600;font-size:12px;color:var(--muted)}
+.lagrid tr.lg td.st{background:var(--row-alt)}
+.lagrid select,.lagrid input{padding:4px 6px;font-size:12px}
+.lagrid .lkn{width:200px}
+.lkst{font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;white-space:nowrap}
+.lkst.ok{background:var(--good-soft);color:var(--good)} .lkst.con{background:var(--bad-soft);color:var(--bad)} .lkst.nc{background:var(--line2);color:var(--muted)}
+.rnext{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.rnext>div{border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;display:flex;flex-direction:column;gap:2px}
+.rnext b{font-family:var(--f-mono);font-size:15px;font-weight:500}
+.rnext span{font-size:12px;color:var(--muted)}
 .pgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
 .pform{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .pform .fld{flex:0 1 auto}
@@ -223,6 +272,7 @@ body.role-guest .save,body.role-pending .save{display:none}
 .tres span:first-of-type{flex:1;min-width:0}
 @media (max-width:1000px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .dgrid,.pgrid{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:720px){
+  .rgrid .st,.lagrid .st{min-width:150px;max-width:170px}
   .gantt{grid-template-columns:var(--lws,210px) 5px minmax(0,1fr)}
   .r .c-w,.r .c-d,.r .c-s,.r .c-f,.r .c-p,.r .c-b,.r .c-v,.r .c-u{display:none}
   .r,.gl .r{grid-template-columns:30px minmax(0,1fr) 42px!important;min-width:0}
@@ -489,6 +539,23 @@ const SAMPLE = {"proj":{"name":"Gedung Kantor 3 Lantai — Cikarang","start":"20
 /* ===== APLIKASI ===== */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const SAMPLE_RES = (() => {
+  const M = (n, k, s, per = true) => ({ j: 'M', n, k, s, per }), A = (n, k, s = 'unit') => ({ j: 'A', n, k, s, per: false });
+  const beton = [M('Beton ready mix K-300', 1.02, 'm³'), A('Concrete pump', 1), A('Concrete vibrator', 2)];
+  const kolom = [...beton, M('Besi beton ulir', 200, 'kg'), M('Multiplek bekisting 12 mm', 1.6, 'lbr')];
+  const pelat = [M('Beton ready mix K-300', 0.16, 'm³'), M('Besi beton ulir', 24, 'kg'), M('Multiplek bekisting 12 mm', 0.36, 'lbr'), A('Concrete pump', 1), A('Concrete vibrator', 2), A('Scaffolding', 120, 'set')];
+  return { '2': [A('Truk trailer', 2)], '3': [A('Theodolite', 1)], '4': [M('Seng gelombang BJLS 30', 0.55, 'lbr'), M('Kayu kaso 5/7', 1.1, 'btg')],
+    '6': [A('Excavator PC200', 1), A('Dump truck', 3)], '7': [M('Tiang spun pile Ø40 L=12 m', 2, 'btg'), A('Hydraulic static pile driver', 1), A('Mobile crane 25 t', 1)],
+    '8': [...beton, M('Besi beton ulir', 150, 'kg')], '9': [M('Tanah urug', 1.2, 'm³'), A('Vibro roller', 1), A('Dump truck', 2)],
+    '12': kolom, '13': pelat, '15': kolom, '16': pelat, '18': kolom,
+    '19': [M('Baja ringan C75', 1.1, 'btg'), M('Reng baja ringan', 1.2, 'btg'), A('Mobile crane 25 t', 1)], '20': [M('Panel atap metal sandwich', 1.05, 'm²')],
+    '22': [M('Bata ringan 10 cm', 8.5, 'bh'), M('Mortar perekat instan', 0.13, 'zak'), A('Scaffolding', 60, 'set')],
+    '23': [M('Semen PC 50 kg', 0.125, 'zak'), M('Pasir pasang', 0.024, 'm³'), A('Molen beton', 2)],
+    '24': [M('Keramik 60×60', 0.73, 'dus'), M('Semen PC 50 kg', 0.2, 'zak'), M('Pasir pasang', 0.03, 'm³')],
+    '26': [M('Papan gypsum 9 mm', 0.36, 'lbr'), M('Rangka hollow 4×4', 0.9, 'btg'), A('Scaffolding', 40, 'set')],
+    '27': [M('Cat tembok', 0.15, 'liter'), M('Plamir tembok', 0.1, 'kg')], '29': [M('Kabel NYM 3×2,5 mm²', 14, 'm')], '30': [M('Pipa PVC Ø3"', 0.25, 'btg'), M('Pipa PPR Ø1"', 0.2, 'btg')] };
+})();
+const SAMPLE_LK = { '18': { s: 'ok', n: '' }, '19': { s: 'con', n: 'Shop drawing rangka atap belum disetujui MK' }, '20': { s: 'con', n: 'Panel sandwich inden 3 minggu, PO belum terbit' }, '26': { s: '', n: '' }, '31': { s: 'con', n: 'Menunggu approval material AC dari owner' }, '24': { s: 'ok', n: '' }, '25': { s: 'ok', n: '' }, '29': { s: 'ok', n: '' }, '30': { s: 'ok', n: '' } };
 const H = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const nf = (v, d = 0) => (v == null || isNaN(v) ? '–' : (+v).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d }));
 const pc = (f, d = 1) => nf(f * 100, d) + '%';
@@ -506,7 +573,7 @@ let db = null, dl = null, user = null;
 try { ST.zoom = LS.get('zoom') || 'week'; const c = JSON.parse(LS.get('collapsed') || '[]'); ST.collapsed = new Set(c); } catch (e) {}
 
 /* ---------- Penyimpanan ---------- */
-function cleanTasks() { return ST.tasks.map(t => ({ uid: t.uid, name: t.name, lvl: t.lvl, dur: t.dur, ms: !!t.ms, snet: t.snet || null, preds: (t.preds || []).map(l => ({ u: String(l.u), t: l.t, lag: +l.lag || 0 })), unit: t.unit || '', qty: +t.qty || 0, cost: +t.cost || 0, w: +t.w || 0, pct0: +t.pct0 || 0, pct0Dn: t.pct0Dn || null, bs: t.bs || null, bf: t.bf || null, bd: t.bd == null ? null : +t.bd })); }
+function cleanTasks() { return ST.tasks.map(t => ({ uid: t.uid, name: t.name, lvl: t.lvl, dur: t.dur, ms: !!t.ms, snet: t.snet || null, preds: (t.preds || []).map(l => ({ u: String(l.u), t: l.t, lag: +l.lag || 0 })), unit: t.unit || '', qty: +t.qty || 0, cost: +t.cost || 0, w: +t.w || 0, pct0: +t.pct0 || 0, pct0Dn: t.pct0Dn || null, bs: t.bs || null, bf: t.bf || null, bd: t.bd == null ? null : +t.bd, ...(t.lk && (t.lk.s || t.lk.n) ? { lk: { s: t.lk.s || '', n: String(t.lk.n || '') } } : {}), ...(t.res && t.res.length ? { res: t.res.map(r => ({ j: r.j === 'A' ? 'A' : 'M', n: String(r.n || ''), k: +r.k || 0, s: String(r.s || ''), per: r.j !== 'A' && !!r.per })) } : {}) })); }
 let saveTimer = null, saving = false, saveAgain = false;
 function setSave(state, text) { const el = $('#save'); el.className = 'save ' + state; $('span', el).textContent = text; }
 function queueSave() { if (!ST.canWrite) return; setSave('busy', 'Menyimpan…'); clearTimeout(saveTimer); saveTimer = setTimeout(persist, 900); }
@@ -584,7 +651,7 @@ async function init() {
     const s = LS.get('sched');
     if (s) { try { ST.prog = JSON.parse(LS.get('prog') || '{}'); loadSchedule(JSON.parse(s)); return; } catch (e) {} }
     if (LS.get('init')) { ST.mode = 'empty'; render(); return; }
-    ST.prog = JSON.parse(JSON.stringify(SAMPLE.prog)); loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks });
+    ST.prog = JSON.parse(JSON.stringify(SAMPLE.prog)); loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks.map(t => ({ ...t, ...(SAMPLE_RES[t.uid] ? { res: SAMPLE_RES[t.uid].map(r => ({ ...r })) } : {}), ...(SAMPLE_LK[t.uid] ? { lk: { ...SAMPLE_LK[t.uid] } } : {}) })) });
   }
 }
 function applyRO() { const b = document.body; b.classList.toggle('ro', !ST.canWrite); ['admin', 'pel', 'guest', 'pending'].forEach(r => b.classList.toggle('role-' + r, ST.role === r)); }
@@ -595,8 +662,8 @@ function updateRole() {
   ST.canWrite = ST.role === 'admin'; applyRO();
   const v = viewsFor(); if (!v.includes(ST.view)) { ST.view = v[0]; ST.sel = null; }
 }
-const VIEW_LABEL = { gantt: 'Jadwal', prog: 'Pelaksana', dash: 'Dashboard', team: 'Tim' };
-function viewsFor() { return ST.role === 'admin' ? ['gantt', 'prog', 'dash', 'team'] : ST.role === 'pel' ? ['prog'] : ['reg']; }
+const VIEW_LABEL = { gantt: 'Jadwal', la: 'Look-ahead', res: 'Resource', prog: 'Pelaksana', dash: 'Dashboard', team: 'Tim' };
+function viewsFor() { return ST.role === 'admin' ? ['gantt', 'la', 'res', 'prog', 'dash', 'team'] : ST.role === 'pel' ? ['prog'] : ['reg']; }
 function renderAs() {
   const el = $('#asWrap'); if (!el) return; el.hidden = !ST.local; if (!ST.local) return;
   const ids = Object.keys(ST.team).filter(id => ST.team[id].active !== false);
@@ -633,7 +700,7 @@ function render() {
   if (ST.role === 'guest') { renderReg(); return; }
   if (ST.view === 'team') { renderTeam(); return; }
   if (!ST.tasks.length) { main.innerHTML = ST.role === 'admin' ? emptyHtml() : '<div class="load">Master schedule belum tersedia. Hubungi admin proyek.</div>'; return; }
-  try { if (ST.view === 'gantt') renderGantt(); else if (ST.view === 'prog') renderProg(); else renderDash(); }
+  try { if (ST.view === 'gantt') renderGantt(); else if (ST.view === 'la') renderLA(); else if (ST.view === 'res') renderRes(); else if (ST.view === 'prog') renderProg(); else renderDash(); }
   catch (e) { console.error(e); main.innerHTML = `<div class="view scroll"><div class="wrap"><div class="card" style="max-width:620px;margin:40px auto"><div class="empty"><h3>Tampilan gagal dimuat</h3><p>Ada data jadwal yang tidak bisa diproses: <span class="mono">${H(e.message || e)}</span></p><p>Kirim file XML-nya ke pengembang, atau coba impor ulang.</p></div></div></div></div>`; }
 }
 function emptyHtml() {
@@ -648,7 +715,7 @@ document.addEventListener('click', e => {
   if (act === 'import') openImport();
   else if (act === 'blank') openBlank();
   else if (act === 'wipe') openWipe();
-  else if (act === 'sample') { const sp = JSON.parse(JSON.stringify(SAMPLE.prog)); ST.prog = {}; loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks }); queueSave(); (async () => { for (const u of Object.keys(sp)) await writeProg(u, sp[u].e).catch(handleDbErr); recalc(); render(); })(); }
+  else if (act === 'sample') { const sp = JSON.parse(JSON.stringify(SAMPLE.prog)); ST.prog = {}; loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks.map(t => ({ ...t, ...(SAMPLE_RES[t.uid] ? { res: SAMPLE_RES[t.uid].map(r => ({ ...r })) } : {}), ...(SAMPLE_LK[t.uid] ? { lk: { ...SAMPLE_LK[t.uid] } } : {}) })) }); queueSave(); (async () => { for (const u of Object.keys(sp)) await writeProg(u, sp[u].e).catch(handleDbErr); recalc(); render(); })(); }
 });
 $('#bImport').onclick = () => openImport();
 $('#bExport').onclick = () => openExport();
@@ -716,7 +783,7 @@ function openImport() {
     <div class="drop" id="drop" tabindex="0"><b>Pilih file .xml</b><br><span style="font-size:12.5px">atau tarik file ke sini · format MSPDI dari MS Project (File › Save As › XML)</span></div>
     <div id="impInfo" class="hint"></div>
     ${ST.tasks.length && !sample ? `<div class="fld"><span class="lbl">Data yang sudah ada</span>
-      <label class="chk"><input type="radio" name="keep" value="keep" checked> Pertahankan progres, satuan &amp; volume untuk aktivitas dengan UID yang sama</label>
+      <label class="chk"><input type="radio" name="keep" value="keep" checked> Pertahankan progres, satuan, volume &amp; resource untuk aktivitas dengan UID yang sama</label>
       <label class="chk"><input type="radio" name="keep" value="clear"> Hapus semua data progres lama</label></div>` : ''}
     ${hasProg && sample ? '<div class="hint">Progres contoh akan dihapus saat file Anda diimpor.</div>' : ''}`,
     [{ label: 'Batal' }], mb => {
@@ -732,7 +799,7 @@ async function doImport(file) {
   try {
     const text = await file.text(); const r = parseMSPDI(text);
     const old = new Map(ST.tasks.map(t => [t.uid, t]));
-    if (keep) r.tasks.forEach(t => { const o = old.get(t.uid); if (o) { if (!t.unit && o.unit) t.unit = o.unit; if (!t.qty && o.qty) t.qty = o.qty; if (o.w) t.w = o.w; } });
+    if (keep) r.tasks.forEach(t => { const o = old.get(t.uid); if (o) { if (!t.unit && o.unit) t.unit = o.unit; if (!t.qty && o.qty) t.qty = o.qty; if (o.w) t.w = o.w; if (o.res && o.res.length) t.res = o.res; if (o.lk) t.lk = o.lk; } });
     r.tasks.forEach(t => { delete t._start; delete t._finish; });
     // Tanpa baseline di file -> jadikan jadwal saat ini sebagai baseline awal
     const noBase = !r.tasks.some(t => t.bs);
@@ -753,6 +820,8 @@ function openExport() {
     <div class="fld"><label class="chk"><input type="radio" name="ex" value="xml" checked> Jadwal MS Project (.xml) – aktivitas, dependency, baseline, % selesai per ${fmtDn(ST.statusDn)}</label>
     <label class="chk"><input type="radio" name="ex" value="csv"> Rekap progres harian/mingguan (.csv)</label>
     <label class="chk"><input type="radio" name="ex" value="wbs"> Tabel kemajuan per aktivitas (.csv)</label>
+    <label class="chk"><input type="radio" name="ex" value="la"> Six-week look-ahead (.csv)</label>
+    <label class="chk"><input type="radio" name="ex" value="res"> Rencana kebutuhan alat &amp; material (.csv)</label>
     <label class="chk"><input type="radio" name="ex" value="pdf"> Laporan mingguan (.pdf)</label></div>
     ${dl ? '' : '<div class="hint">Unduhan tidak tersedia di tampilan ini. Isi file akan ditampilkan agar bisa disalin.</div>'}`,
     [{ label: 'Batal' }, { label: 'Simpan file', cls: 'pri', fn: mb => { doExport($('input[name="ex"]:checked', mb).value); } }]);
@@ -762,6 +831,8 @@ async function doExport(kind) {
   if (kind === 'pdf') { setTimeout(openReport, 60); return; }
   let name, data; const safe = ST.proj.name.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'proyek';
   if (kind === 'xml') { name = safe + '.xml'; data = exportMSPDI(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); }
+  else if (kind === 'la') { const W = laWindow(); name = safe + '_lookahead_' + dnToIso(W.a) + '.csv'; data = laCsv(); }
+  else if (kind === 'res') { name = safe + '_resource_' + ((ST.resZ || 'week') === 'month' ? 'bulanan' : 'mingguan') + '.csv'; data = resCsv(); }
   else if (kind === 'csv') {
     const rows = [['Tanggal', 'Periode', 'WBS', 'Aktivitas', 'Volume', 'Satuan', 'Catatan']];
     ST.tasks.filter(t => !t.sum).forEach(t => entriesOf(ST.prog, t.uid).forEach(e => rows.push([e.d, e.p === 'W' ? 'Mingguan' : 'Harian', t.wbs, t.name, e.q, t.unit, e.n || ''])));
@@ -1010,7 +1081,13 @@ function drawerHtml() {
         <div class="fld"><label for="fCost">Biaya (Rp)</label><input id="fCost" type="number" min="0" step="any" value="${t.cost || ''}" ${ro}></div>
         <div class="fld"><label for="fW">Bobot manual</label><input id="fW" type="number" min="0" step="any" value="${t.w || ''}" ${ro} placeholder="otomatis"></div>
       </div>
-      <div class="hint">Bobot saat ini ${nf(t.bobot, 2)}% · rencana ${pc(t.plan)} · realisasi ${pc(t.act)}${t.qty ? ` (${nf(actualQty(ST.prog, t.uid, ST.statusDn), 2)} / ${nf(t.qty, 2)} ${H(t.unit)})` : ''}${ent.length ? ` · ${ent.length} catatan progres` : ''}</div>`}
+      <div class="hint">Bobot saat ini ${nf(t.bobot, 2)}% · rencana ${pc(t.plan)} · realisasi ${pc(t.act)}${t.qty ? ` (${nf(actualQty(ST.prog, t.uid, ST.statusDn), 2)} / ${nf(t.qty, 2)} ${H(t.unit)})` : ''}${ent.length ? ` · ${ent.length} catatan progres` : ''}</div>
+      <div class="lbl" style="margin-top:4px">Resource (alat &amp; material)</div>
+      <div id="resList" style="display:flex;flex-direction:column;gap:6px">${(t.res || []).map(r => resRowHtml(r, t, ro)).join('')}</div>
+      ${ST.canWrite ? '<button class="btn ghost" data-dc="radd" style="align-self:flex-start">+ Resource</button>' : (t.res && t.res.length ? '' : '<div class="hint">Belum ada resource.</div>')}
+      <span class="hint">Material: koefisien per satuan volume (mis. 0,125 zak per m²) atau jumlah total. Alat: jumlah unit yang dikerahkan selama aktivitas berjalan.</span>
+      <datalist id="resNames">${resNames().map(n => `<option value="${H(n)}">`).join('')}</datalist>
+      <datalist id="resUnits">${RES_UNITS.map(u => `<option value="${H(u)}">`).join('')}</datalist>`}
     </div>
     <footer class="edit-only"><button class="btn pri" data-dc="apply">Terapkan</button><button class="btn" data-dc="baseline">Baseline aktivitas ini</button><button class="btn ghost danger" data-dc="del">Hapus</button></footer>
     <datalist id="units">${UNITS.map(u => `<option value="${H(u)}">`).join('')}</datalist>
@@ -1020,14 +1097,19 @@ function wireDrawer() {
   const dr = $('.drawer'); const t = ST.byUid.get(ST.sel);
   dr.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); apply(); } });
   dr.onclick = e => { const b = e.target.closest('[data-dc]'); if (!b) return; const a = b.dataset.dc;
+    if (a === 'radd') { const box = $('#resList'); box.insertAdjacentHTML('beforeend', resRowHtml({ j: 'M', n: '', k: '', s: '', per: !!t.qty }, t, '')); const ins = $$('input[data-r="n"]', box); ins[ins.length - 1].focus(); return; }
+    if (a === 'rdel') { b.closest('.rs-row').remove(); return; }
     if (a === 'close') { ST.sel = null; renderGantt(); } else if (a === 'apply') apply(); else if (a === 'del') delTask(); else if (a === 'baseline') { pushUndo(); setBaseline(true); commit(); toast('Baseline aktivitas diperbarui.'); } };
+  dr.addEventListener('change', e => { const row = e.target.closest('.rs-row'); if (!row) return; if (e.target.dataset.r === 'j') { const r = readResRow(row); if (r.j === 'A') { r.per = false; if (!r.s || !RES_UNITS_A.includes(r.s)) r.s = 'unit'; } row.outerHTML = resRowHtml(r, t, ''); } });
+  dr.addEventListener('input', e => { const row = e.target.closest('.rs-row'); if (row) { const tot = $('.tot', row); if (tot) tot.textContent = resTotText(readResRow(row), t); } });
   function apply() {
     if (!ST.canWrite) return; const v = id => { const el = $('#' + id); return el ? el.value : null; };
     const pr = textToPreds(v('fPred'), ST.tasks); if (pr.errs.length) { $('#predErr') ? $('#predErr').textContent = 'Tidak dikenali: ' + pr.errs.join(', ') : toast('Predecessor tidak dikenali: ' + pr.errs.join(', ')); return; }
     if (pr.preds.some(p => p.u === t.uid)) { toast('Aktivitas tidak bisa menjadi predecessor dirinya sendiri.'); return; }
     pushUndo(); t.name = (v('fName') || '').trim() || t.name; t.preds = pr.preds;
     if (!t.sum) { const ms = $('#fMs').checked; t.ms = ms; const d = parseFloat(v('fDur')); t.dur = ms ? 0 : (isNaN(d) ? t.dur : Math.max(0, d)); if (!ms && t.dur === 0) t.ms = true;
-      t.snet = v('fSnet') || null; t.qty = parseFloat(v('fQty')) || 0; t.unit = (v('fUnit') || '').trim(); t.cost = parseFloat(v('fCost')) || 0; t.w = parseFloat(v('fW')) || 0; }
+      t.snet = v('fSnet') || null; t.qty = parseFloat(v('fQty')) || 0; t.unit = (v('fUnit') || '').trim(); t.cost = parseFloat(v('fCost')) || 0; t.w = parseFloat(v('fW')) || 0;
+      const res = $$('.rs-row', dr).map(readResRow).filter(r => r.n); if (res.length) t.res = res; else delete t.res; }
     commit(); if (ST.sched.cycle) toast('Dependency melingkar terdeteksi. Periksa predecessor.'); else toast('Perubahan diterapkan.');
   }
 }
@@ -1273,6 +1355,196 @@ function renderDash() {
   $('#dReport').onclick = () => openReport();
   $('#dDate').onchange = e => { const d = isoToDn(e.target.value); ST.statusDn = d || TODAY; recalc(); renderDash(); };
   drawCharts();
+}
+/* ---------- Resource ---------- */
+const RES_UNITS = ['zak', 'kg', 'ton', 'm³', 'm²', 'm', 'btg', 'lbr', 'bh', 'dus', 'liter', 'set', 'unit', 'ls'];
+const RES_UNITS_A = ['unit', 'set', 'bh'];
+function resNames() { const s = new Set(); ST.tasks.forEach(t => (t.res || []).forEach(r => r.n && s.add(r.n))); return [...s].sort((a, b) => a.localeCompare(b, 'id')); }
+function resNeed(t, r) { return r.j !== 'A' && r.per ? (+r.k || 0) * (+t.qty || 0) : (+r.k || 0); }
+function resTotText(r, t) {
+  if (!r.n && !r.k) return '';
+  if (r.j === 'A') return `${nf(+r.k || 0, (+r.k || 0) % 1 ? 1 : 0)} ${r.s || 'unit'} × ${nf(t.calDur || t.dur || 0, 0)} hari kerja`;
+  if (r.per && !t.qty) return 'Isi volume target aktivitas agar kebutuhan total bisa dihitung.';
+  const q = resNeed(t, r); return `Kebutuhan total: ${nf(q, q % 1 ? 2 : 0)} ${r.s || ''}`;
+}
+function resRowHtml(r, t, ro) {
+  const A = r.j === 'A';
+  return `<div class="rs-row">
+    <select data-r="j" ${ro} aria-label="Jenis resource"><option value="M" ${A ? '' : 'selected'}>Material</option><option value="A" ${A ? 'selected' : ''}>Alat</option></select>
+    <input data-r="n" list="resNames" value="${H(r.n || '')}" placeholder="${A ? 'mis. Excavator PC200' : 'mis. Semen PC 50 kg'}" ${ro} aria-label="Nama resource">
+    ${ro ? '<span></span>' : `<button class="x" data-dc="rdel" title="Hapus resource" aria-label="Hapus resource">×</button>`}
+    <div class="l2">
+      <input data-r="k" type="number" min="0" step="any" value="${r.k === '' ? '' : (+r.k || '')}" placeholder="${A ? 'unit' : 'jumlah'}" ${ro} aria-label="${A ? 'Jumlah unit' : 'Koefisien atau jumlah'}">
+      <input data-r="s" list="resUnits" value="${H(r.s || '')}" placeholder="satuan" ${ro} aria-label="Satuan resource">
+      ${A ? `<select data-r="per" disabled aria-label="Basis"><option>selama aktivitas</option></select>` : `<select data-r="per" ${ro} aria-label="Basis"><option value="1" ${r.per ? 'selected' : ''}>per ${H(t.unit || 'satuan vol.')}</option><option value="0" ${r.per ? '' : 'selected'}>total</option></select>`}
+    </div>
+    <div class="tot">${H(resTotText(r, t))}</div></div>`;
+}
+function readResRow(row) {
+  const g = k => { const el = $(`[data-r="${k}"]`, row); return el ? el.value : ''; };
+  const j = g('j') === 'A' ? 'A' : 'M';
+  return { j, n: g('n').trim(), k: parseFloat(g('k')) || 0, s: g('s').trim(), per: j === 'M' && g('per') === '1' };
+}
+function resPlan(filterUids) {
+  const cal = ST.sched.cal; const map = new Map();
+  for (const t of ST.tasks) {
+    if (t.sum || !t.res || !t.res.length || (filterUids && !filterUids.has(t.uid))) continue;
+    const days = []; for (let d = t.startDn; d <= t.finishDn; d++) if (cal.isWork(d)) days.push(d); if (!days.length) days.push(t.startDn);
+    for (const r of t.res) {
+      if (!r.n) continue; const j = r.j === 'A' ? 'A' : 'M';
+      const key = j + '|' + r.n.trim().toLowerCase() + '|' + (r.s || '').trim().toLowerCase();
+      let R = map.get(key); if (!R) { R = { key, j, n: r.n.trim(), s: (r.s || (j === 'A' ? 'unit' : '')).trim(), total: 0, done: 0, ud: 0, peak: 0, a: Infinity, b: -Infinity, daily: new Map(), uses: [] }; map.set(key, R); }
+      const need = resNeed(t, r); const per = j === 'A' ? need : need / days.length;
+      const u = { t, r, need, per, days }; R.uses.push(u);
+      days.forEach(d => R.daily.set(d, (R.daily.get(d) || 0) + per));
+      R.a = Math.min(R.a, days[0]); R.b = Math.max(R.b, days[days.length - 1]);
+      if (j === 'M') { R.total += need; R.done += need * Math.min(1, t.act || 0); } else R.ud += need * days.length;
+    }
+  }
+  const list = [...map.values()]; list.forEach(R => { if (R.j === 'A') { R.peak = Math.max(0, ...R.daily.values()); R.total = R.peak; } });
+  return list.sort((x, y) => x.j === y.j ? x.n.localeCompare(y.n, 'id') : x.j === 'M' ? -1 : 1);
+}
+function resBuckets(z) {
+  const a = ST.sched.startDn, b = ST.sched.finishDn; const out = []; const dm = dn => { const d = new Date(dn * DAY); return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
+  if (z === 'month') { const d0 = new Date(a * DAY); let y = d0.getUTCFullYear(), m = d0.getUTCMonth();
+    for (;;) { const s = Math.floor(Date.UTC(y, m, 1) / DAY); if (s > b) break; out.push({ a: s, b: Math.floor(Date.UTC(y, m + 1, 1) / DAY) - 1, l: MONTHS[m], sub: String(y) }); if (++m > 11) { m = 0; y++; } } }
+  else { let s = a - ((dnDow(a) + 6) % 7), i = 1; while (s <= b) { out.push({ a: s, b: s + 6, l: 'M' + i, sub: dm(s) }); s += 7; i++; } }
+  return out;
+}
+function resVal(daily, j, a, b) { let v = 0; for (let d = a; d <= b; d++) { const x = daily.get(d); if (x) v = j === 'A' ? Math.max(v, x) : v + x; } return v; }
+function resFmt(v) { return v ? nf(v, v >= 100 ? 0 : v % 1 ? (v < 10 ? 2 : 1) : 0) : ''; }
+function renderRes() {
+  computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
+  const z = ST.resZ || 'week', jf = ST.resJ || 'all', grpU = ST.resG || 'all', q = (ST.resQ || '').toLowerCase();
+  const tops = ST.tasks.filter(t => t.sum && t.lvl === 1); const grp = grpU !== 'all' && ST.byUid.get(grpU);
+  const filt = grp ? new Set(leavesOf(grp).map(t => t.uid)) : null;
+  const all = resPlan(filt); const list = all.filter(R => (jf === 'all' || R.j === jf) && (!q || R.n.toLowerCase().includes(q)));
+  const B = resBuckets(z); const sd = ST.statusDn; const open = ST.resOpen || (ST.resOpen = new Set());
+  const nA = sd + 1, nB = sd + 14;
+  const next = list.map(R => { const v = resVal(R.daily, R.j, nA, nB); let first = null; for (let d = nA; d <= nB; d++) if (R.daily.get(d)) { first = d; break; } return { R, v, first }; }).filter(x => x.v > 0).sort((x, y) => x.first - y.first || (x.R.j < y.R.j ? -1 : 1));
+  const anyRes = ST.tasks.some(t => !t.sum && t.res && t.res.length);
+  const head = `<div class="dhead"><h2>Kebutuhan resource<small>${H(ST.proj.name)} · alat &amp; material dari aktivitas, mengikuti jadwal saat ini</small></h2>
+      <div class="fld"><label for="rDate">Tanggal status</label><input id="rDate" type="date" value="${dnToIso(sd)}"></div></div>`;
+  if (!anyRes) { $('#main').innerHTML = `<div class="view scroll"><div class="wrap">${head}<div class="card" style="max-width:640px;margin:20px auto"><div class="empty"><h3>Belum ada resource</h3>
+    <p>Buka tab <b>Jadwal</b>, klik sebuah aktivitas, lalu di panel detail tekan <b>+ Resource</b>. Isi material (koefisien per satuan volume atau jumlah total) dan alat (jumlah unit). Kebutuhannya akan direkap di sini per minggu atau per bulan.</p>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px"><button class="btn pri" id="rGo">Buka tab Jadwal</button></div></div></div></div></div>`;
+    $('#rGo').onclick = () => { ST.view = 'gantt'; render(); }; $('#rDate').onchange = e => { ST.statusDn = isoToDn(e.target.value) || TODAY; recalc(); renderRes(); }; return; }
+  const nM = all.filter(R => R.j === 'M').length, nAl = all.filter(R => R.j === 'A').length;
+  const rowsHtml = list.map(R => {
+    const isO = open.has(R.key); const rmax = Math.max(...B.map(b => resVal(R.daily, R.j, b.a, b.b)), 1e-9);
+    const cells = B.map(b => { const v = resVal(R.daily, R.j, b.a, b.b); const now = sd >= b.a && sd <= b.b; return `<td class="b ${now ? 'now' : ''}" style="${v ? `background:color-mix(in srgb, var(${R.j === 'A' ? '--warn' : '--accent'}) ${Math.round(8 + 30 * v / rmax)}%, transparent)` : ''}">${resFmt(v)}</td>`; }).join('');
+    const sum = R.j === 'M'
+      ? `<td class="n">${resFmt(R.total)}</td><td class="n">${resFmt(R.done) || '0'}</td><td class="n">${resFmt(Math.max(0, R.total - R.done)) || '0'}</td>`
+      : `<td class="n">${resFmt(R.peak)}</td><td class="n" title="unit × hari kerja">${resFmt(R.ud)}</td><td class="n" style="font-size:11px">${fmtDn(R.a)}–${fmtDn(R.b)}</td>`;
+    const sub = isO ? R.uses.map(u => { const d = new Map(u.days.map(x => [x, u.per])); return `<tr class="rt"><td class="st" title="${H(u.t.name)}">${u.t.wbs} ${H(u.t.name)}</td><td>${u.r.j === 'M' && u.r.per ? nf(u.r.k, u.r.k % 1 ? 3 : 0) + '/' + H(u.t.unit) : ''}</td>${R.j === 'M' ? `<td class="n">${resFmt(u.need)}</td><td class="n">${resFmt(u.need * Math.min(1, u.t.act || 0)) || '0'}</td><td class="n">${resFmt(u.need * (1 - Math.min(1, u.t.act || 0))) || '0'}</td>` : `<td class="n">${resFmt(u.need)}</td><td class="n">${resFmt(u.need * u.days.length)}</td><td class="n" style="font-size:11px">${fmtDn(u.days[0])}–${fmtDn(u.days[u.days.length - 1])}</td>`}${B.map(b => `<td class="b ${sd >= b.a && sd <= b.b ? 'now' : ''}">${resFmt(resVal(d, R.j, b.a, b.b))}</td>`).join('')}</tr>`; }).join('') : '';
+    return `<tr class="rr ${isO ? 'open' : ''}" data-k="${H(R.key)}"><td class="st" title="${H(R.n)}"><span class="car" style="display:inline-grid;vertical-align:-3px;margin-right:2px">${ICON.car}</span><span class="rtag ${R.j}">${R.j === 'A' ? 'ALAT' : 'MAT'}</span>${H(R.n)}</td><td>${H(R.s)}</td>${sum}${cells}</tr>${sub}`;
+  }).join('');
+  const thSum = jf === 'A' ? '<th class="n">Puncak</th><th class="n">Unit-hari</th><th class="n">Periode pakai</th>' : jf === 'M' ? '<th class="n">Total</th><th class="n">Terpasang</th><th class="n">Sisa</th>' : '<th class="n">Total / puncak</th><th class="n">Terpasang / unit-hari</th><th class="n">Sisa / periode</th>';
+  $('#main').innerHTML = `<div class="view scroll"><div class="wrap">${head}
+    <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+      <div class="kpi"><div class="k">Jenis material</div><div class="v">${nM}</div><div class="s">${grp ? H(grp.name) : 'seluruh proyek'}</div></div>
+      <div class="kpi"><div class="k">Jenis alat</div><div class="v">${nAl}</div><div class="s">${grp ? H(grp.name) : 'seluruh proyek'}</div></div>
+      <div class="kpi"><div class="k">Aktivitas dengan resource</div><div class="v">${ST.tasks.filter(t => !t.sum && t.res && t.res.length && (!filt || filt.has(t.uid))).length}</div><div class="s">dari ${ST.tasks.filter(t => !t.sum && (!filt || filt.has(t.uid))).length} aktivitas</div></div>
+    </div>
+    <section class="card" style="margin-bottom:16px"><div class="hd"><h2>Dibutuhkan 2 minggu ke depan</h2><span class="sub">${fmtDn(nA)} – ${fmtDn(nB)} · material: jumlah yang dipakai, alat: unit maksimum di lapangan</span></div>
+      <div class="bd">${next.length ? `<div class="rnext">${next.map(({ R, v, first }) => `<div><span><span class="rtag ${R.j}">${R.j === 'A' ? 'ALAT' : 'MAT'}</span>${H(R.n)}</span><b>${resFmt(v)} ${H(R.s)}</b><span>mulai ${DOWS[dnDow(first)]}, ${fmtDn(first)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:12px">Tidak ada kebutuhan resource pada periode ini.</div>'}</div></section>
+    <section class="card"><div class="hd"><h2>Jadwal kebutuhan</h2><span class="sub">Material dijumlah per periode, alat = unit maksimum per periode. Klik baris untuk melihat aktivitasnya.</span></div>
+      <div class="bd pform" style="border-bottom:1px solid var(--line2)">
+        <div class="fld"><span class="lbl">Jenis</span><div class="seg" role="group">${[['all', 'Semua'], ['M', 'Material'], ['A', 'Alat']].map(([v, l]) => `<button data-rj="${v}" aria-pressed="${jf === v}">${l}</button>`).join('')}</div></div>
+        <div class="fld"><span class="lbl">Skala</span><div class="seg" role="group">${[['week', 'Minggu'], ['month', 'Bulan']].map(([v, l]) => `<button data-rz="${v}" aria-pressed="${z === v}">${l}</button>`).join('')}</div></div>
+        <div class="fld grow"><label for="rGrp">Kelompok pekerjaan</label><select id="rGrp"><option value="all">Seluruh proyek</option>${tops.map(s => `<option value="${H(s.uid)}" ${s.uid === grpU ? 'selected' : ''}>${s.wbs} ${H(s.name)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="rQ">Cari</label><input id="rQ" class="inp" value="${H(ST.resQ || '')}" placeholder="nama resource"></div>
+        <button class="btn" id="rCsv" style="align-self:flex-end">Ekspor CSV</button>
+      </div>
+      ${list.length ? `<div class="tw" style="max-height:70vh;overflow:auto"><table class="rgrid"><thead><tr><th class="st">Resource</th><th>Satuan</th>${thSum}${B.map(b => `<th class="n ${sd >= b.a && sd <= b.b ? 'now' : ''}">${b.l}<small>${b.sub}</small></th>`).join('')}</tr></thead><tbody>${rowsHtml}</tbody></table></div>` : '<div class="empty">Tidak ada resource yang cocok dengan filter.</div>'}
+    </section></div></div>`;
+  $('#rDate').onchange = e => { ST.statusDn = isoToDn(e.target.value) || TODAY; recalc(); renderRes(); };
+  $$('[data-rj]').forEach(b => b.onclick = () => { ST.resJ = b.dataset.rj; renderRes(); });
+  $$('[data-rz]').forEach(b => b.onclick = () => { ST.resZ = b.dataset.rz; renderRes(); });
+  $('#rGrp').onchange = e => { ST.resG = e.target.value; renderRes(); };
+  $('#rQ').oninput = e => { ST.resQ = e.target.value; clearTimeout(ST.resQT); ST.resQT = setTimeout(() => { renderRes(); const i = $('#rQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); };
+  $('#rCsv').onclick = () => doExport('res');
+  const tb = $('.rgrid tbody'); if (tb) tb.onclick = e => { const r = e.target.closest('tr.rr'); if (!r) return; const k = r.dataset.k; open.has(k) ? open.delete(k) : open.add(k); renderRes(); };
+}
+function resCsv() {
+  computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
+  const B = resBuckets(ST.resZ || 'week'); const list = resPlan(null); const f = v => (Math.round(v * 1000) / 1000).toString().replace('.', ',');
+  const rows = [['Jenis', 'Resource', 'Satuan', 'Total / puncak unit', 'Terpasang', 'Sisa', 'Unit-hari', 'Mulai', 'Selesai', ...B.map(b => b.l + ' (' + dnToIso(b.a) + ')')]];
+  list.forEach(R => rows.push([R.j === 'A' ? 'Alat' : 'Material', R.n, R.s, f(R.total), R.j === 'M' ? f(R.done) : '', R.j === 'M' ? f(Math.max(0, R.total - R.done)) : '', R.j === 'A' ? f(R.ud) : '', dnToIso(R.a), dnToIso(R.b), ...B.map(b => { const v = resVal(R.daily, R.j, b.a, b.b); return v ? f(v) : ''; })]));
+  rows.push([]); rows.push(['Rincian per aktivitas']); rows.push(['Jenis', 'Resource', 'Satuan', 'WBS', 'Aktivitas', 'Koefisien', 'Basis', 'Kebutuhan', 'Mulai', 'Selesai']);
+  list.forEach(R => R.uses.forEach(u => rows.push([R.j === 'A' ? 'Alat' : 'Material', R.n, R.s, u.t.wbs, u.t.name, f(+u.r.k || 0), R.j === 'A' ? 'unit selama aktivitas' : u.r.per ? 'per ' + (u.t.unit || 'satuan') : 'total', f(u.need), dnToIso(u.days[0]), dnToIso(u.days[u.days.length - 1])])));
+  return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\n');
+}
+/* ---------- Six-week look-ahead ---------- */
+const LK_LABEL = { ok: 'Siap', con: 'Ada kendala', '': 'Belum dicek' };
+function laWindow() { const base = ST.statusDn - ((dnDow(ST.statusDn) + 6) % 7) + 7 * (ST.laOff || 0); return { a: base, b: base + 41 }; }
+function laTasks(W) { return ST.tasks.filter(t => !t.sum && t.startDn <= W.b && t.finishDn >= W.a && (t.act || 0) < 0.9999); }
+function renderLA() {
+  computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
+  const W = laWindow(); const cal = ST.sched.cal; const sd = ST.statusDn; const f = ST.laF || 'all'; const admin = ST.canWrite;
+  const all = laTasks(W); const list = all.filter(t => f === 'all' || (f === 'crit' && t.crit) || (f === 'con' && t.lk && t.lk.s === 'con') || (f === 'nc' && !(t.lk && t.lk.s)));
+  const nCon = all.filter(t => t.lk && t.lk.s === 'con').length, nOk = all.filter(t => t.lk && t.lk.s === 'ok').length, nCrit = all.filter(t => t.crit).length;
+  const days = Array.from({ length: 42 }, (_, i) => W.a + i);
+  const dm = dn => { const d = new Date(dn * DAY); return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
+  const startMon = ST.sched.startDn - ((dnDow(ST.sched.startDn) + 6) % 7);
+  const wkHead = [0, 1, 2, 3, 4, 5].map(i => { const a = W.a + i * 7; const no = Math.floor((a - startMon) / 7) + 1; return `<th class="wk" colspan="7">Mg ${no}<small>${dm(a)}–${dm(a + 6)}</small></th>`; }).join('');
+  const dayHead = days.map((d, i) => `<th class="dc ${i % 7 === 0 ? 'wl' : ''}" style="${d === sd ? 'color:var(--today);font-weight:700' : ''}">${DOWS[dnDow(d)][0]}</th>`).join('');
+  // kelompokkan per induk
+  const groups = []; const gi = new Map(); list.forEach(t => { const g = t.parent || null; const k = g ? g.uid : '_'; if (!gi.has(k)) { gi.set(k, groups.length); groups.push({ g, items: [] }); } groups[gi.get(k)].items.push(t); });
+  const rowsHtml = groups.map(({ g, items }) => (g ? `<tr class="lg"><td class="st">${g.wbs} ${H(g.name)}</td><td colspan="7"></td><td colspan="42" class="wl"></td></tr>` : '') + items.map(t => {
+    const lk = t.lk || { s: '', n: '' }; const q = t.qty ? actualQty(ST.prog, t.uid, sd) : 0;
+    const cells = days.map((d, i) => { const on = d >= t.startDn && d <= t.finishDn; const w = cal.isWork(d);
+      const mk = t.ms ? (d === t.startDn ? '<i class="ms"></i>' : '') : (on && w ? `<i class="${t.crit ? 'c' : ''}"></i>` : '');
+      return `<td class="dc ${i % 7 === 0 ? 'wl' : ''} ${w ? '' : 'nw'} ${d === sd ? 'td' : ''}">${mk}</td>`; }).join('');
+    return `<tr data-uid="${H(t.uid)}"><td class="st" title="${H(t.name)}"><span class="mono" style="color:var(--faint);font-size:11px;margin-right:6px">${t.wbs}</span>${t.ms ? '◆ ' : ''}${H(t.name)}</td>
+      <td class="n">${fmtDn(t.startDn)}</td><td class="n">${fmtDn(t.finishDn)}</td>
+      <td class="n">${t.qty ? nf(Math.max(0, t.qty - q), 0) + ' ' + H(t.unit) : '–'}</td><td class="n">${pc(t.act || 0, 0)}</td>
+      <td>${t.crit ? '<span class="chip crit">Kritis</span>' : `<span class="chip">${nf(t.float, 0)} hr</span>`}</td>
+      <td>${admin ? `<select data-lk="s" aria-label="Status kesiapan ${H(t.name)}">${['', 'ok', 'con'].map(v => `<option value="${v}" ${lk.s === v ? 'selected' : ''}>${LK_LABEL[v]}</option>`).join('')}</select>` : `<span class="lkst ${lk.s || 'nc'}">${LK_LABEL[lk.s || '']}</span>`}</td>
+      <td>${admin ? `<input class="inp lkn" data-lk="n" value="${H(lk.n || '')}" placeholder="kendala / tindakan" aria-label="Kendala ${H(t.name)}">` : `<span style="font-size:12px;color:var(--muted)">${H(lk.n || '')}</span>`}</td>${cells}</tr>`;
+  }).join('')).join('');
+  // resource per minggu
+  const filt = new Set(all.map(t => t.uid)); const rp_ = resPlan(filt);
+  const wk = [0, 1, 2, 3, 4, 5].map(i => ({ a: W.a + i * 7, b: W.a + i * 7 + 6 }));
+  const rrows = rp_.map(R => ({ R, v: wk.map(w => resVal(R.daily, R.j, w.a, w.b)) })).filter(x => x.v.some(Boolean));
+  $('#main').innerHTML = `<div class="view scroll"><div class="wrap">
+    <div class="dhead"><h2>Six-week look-ahead<small>${fmtLong(W.a)} – ${fmtLong(W.b)} · aktivitas yang dijadwalkan berjalan dan belum selesai, mengikuti jadwal saat ini</small></h2>
+      <div class="seg" role="group" aria-label="Geser jendela"><button data-lo="-1" aria-label="Minggu sebelumnya">‹ Mg</button><button data-lo="0" aria-pressed="${!ST.laOff}">Minggu ini</button><button data-lo="1" aria-label="Minggu berikutnya">Mg ›</button></div>
+      <div class="fld"><label for="lDate">Tanggal status</label><input id="lDate" type="date" value="${dnToIso(sd)}"></div>
+      <button class="btn" id="lCsv">Ekspor CSV</button></div>
+    <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="kpi"><div class="k">Aktivitas di jendela</div><div class="v">${all.length}</div><div class="s">6 minggu</div></div>
+      <div class="kpi ${nCrit ? 'warn' : ''}"><div class="k">Di jalur kritis</div><div class="v">${nCrit}</div><div class="s">float 0 hari</div></div>
+      <div class="kpi good"><div class="k">Siap dikerjakan</div><div class="v">${nOk}</div><div class="s">kendala sudah dibereskan</div></div>
+      <div class="kpi ${nCon ? 'bad' : ''}"><div class="k">Ada kendala</div><div class="v">${nCon}</div><div class="s">${all.length - nOk - nCon} belum dicek</div></div>
+    </div>
+    <section class="card" style="margin-bottom:16px"><div class="hd"><h2>Jadwal 6 minggu</h2><span class="sub">Tandai kesiapan tiap aktivitas: material, alat, tenaga, gambar kerja, izin, dan pekerjaan pendahulu.</span>
+      <div class="seg" role="group" style="margin-left:auto">${[['all', 'Semua'], ['crit', 'Kritis'], ['con', 'Ada kendala'], ['nc', 'Belum dicek']].map(([v, l]) => `<button data-lf="${v}" aria-pressed="${f === v}">${l}</button>`).join('')}</div></div>
+      ${list.length ? `<div class="tw" style="max-height:72vh;overflow:auto"><table class="lagrid"><thead>
+        <tr><th class="st" rowspan="2">Aktivitas</th><th class="n" rowspan="2">Mulai</th><th class="n" rowspan="2">Selesai</th><th class="n" rowspan="2">Sisa volume</th><th class="n" rowspan="2">Real.</th><th rowspan="2">Float</th><th rowspan="2">Kesiapan</th><th rowspan="2">Kendala / tindakan</th>${wkHead}</tr>
+        <tr>${dayHead}</tr></thead><tbody>${rowsHtml}</tbody></table></div>` : `<div class="empty">${all.length ? 'Tidak ada aktivitas yang cocok dengan filter.' : 'Tidak ada aktivitas yang dijadwalkan pada 6 minggu ini.'}</div>`}
+    </section>
+    <section class="card"><div class="hd"><h2>Kebutuhan alat &amp; material</h2><span class="sub">Dari resource aktivitas di jendela ini · material dijumlah per minggu, alat = unit maksimum</span></div>
+      ${rrows.length ? `<div class="tw"><table class="rgrid"><thead><tr><th class="st">Resource</th><th>Satuan</th>${wk.map((w, i) => `<th class="n ${sd >= w.a && sd <= w.b ? 'now' : ''}">Mg ${Math.floor((w.a - startMon) / 7) + 1}<small>${dm(w.a)}</small></th>`).join('')}<th class="n">Total 6 mg</th></tr></thead><tbody>
+        ${rrows.map(({ R, v }) => `<tr><td class="st" title="${H(R.n)}"><span class="rtag ${R.j}">${R.j === 'A' ? 'ALAT' : 'MAT'}</span>${H(R.n)}</td><td>${H(R.s)}</td>${v.map((x, i) => `<td class="b ${sd >= wk[i].a && sd <= wk[i].b ? 'now' : ''}">${resFmt(x)}</td>`).join('')}<td class="n">${R.j === 'A' ? resFmt(Math.max(...v)) : resFmt(v.reduce((a, b) => a + b, 0))}</td></tr>`).join('')}
+      </tbody></table></div>` : `<div class="empty" style="padding:16px">Belum ada resource pada aktivitas di jendela ini. Tambahkan lewat panel detail aktivitas di tab <b>Jadwal</b>.</div>`}
+    </section></div></div>`;
+  $$('[data-lo]').forEach(b => b.onclick = () => { const d = +b.dataset.lo; ST.laOff = d ? (ST.laOff || 0) + d : 0; renderLA(); });
+  $$('[data-lf]').forEach(b => b.onclick = () => { ST.laF = b.dataset.lf; renderLA(); });
+  $('#lDate').onchange = e => { ST.statusDn = isoToDn(e.target.value) || TODAY; ST.laOff = 0; recalc(); renderLA(); };
+  $('#lCsv').onclick = () => doExport('la');
+  const tb = $('.lagrid tbody'); if (tb && admin) {
+    const upd = (el, rerender) => { const t = ST.byUid.get(el.closest('tr').dataset.uid); if (!t) return; const lk = t.lk ? { ...t.lk } : { s: '', n: '' }; lk[el.dataset.lk] = el.value.trim ? (el.dataset.lk === 'n' ? el.value : el.value) : el.value; if (!lk.s && !lk.n) delete t.lk; else t.lk = lk; queueSave(); if (rerender) renderLA(); };
+    tb.addEventListener('change', e => { const el = e.target.closest('[data-lk]'); if (el) upd(el, el.dataset.lk === 's'); });
+    tb.addEventListener('input', e => { const el = e.target.closest('[data-lk="n"]'); if (el) upd(el, false); });
+  }
+}
+function laCsv() {
+  computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
+  const W = laWindow(); const cal = ST.sched.cal; const days = Array.from({ length: 42 }, (_, i) => W.a + i);
+  const rows = [['Six-week look-ahead', ST.proj.name, dnToIso(W.a) + ' s.d. ' + dnToIso(W.b)], [], ['WBS', 'Kelompok', 'Aktivitas', 'Mulai', 'Selesai', 'Sisa volume', 'Satuan', 'Realisasi %', 'Kritis', 'Float (hari)', 'Kesiapan', 'Kendala / tindakan', ...days.map(dnToIso)]];
+  laTasks(W).forEach(t => { const lk = t.lk || {}; rows.push([t.wbs, t.parent ? t.parent.name : '', t.name, dnToIso(t.startDn), dnToIso(t.finishDn), t.qty ? Math.max(0, t.qty - actualQty(ST.prog, t.uid, ST.statusDn)) : '', t.unit || '', Math.round((t.act || 0) * 100), t.crit ? 'Ya' : '', Math.round(t.float || 0), LK_LABEL[lk.s || ''], lk.n || '', ...days.map(d => (t.ms ? d === t.startDn : d >= t.startDn && d <= t.finishDn && cal.isWork(d)) ? 'x' : '')]); });
+  return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\n');
 }
 function rp(v) { const a = Math.abs(v); const s = v < 0 ? '−' : ''; if (a >= 1e9) return s + 'Rp ' + nf(a / 1e9, 2) + ' M'; if (a >= 1e6) return s + 'Rp ' + nf(a / 1e6, 1) + ' jt'; return s + 'Rp ' + nf(a, 0); }
 let ro_ = null;
