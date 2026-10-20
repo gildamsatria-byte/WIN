@@ -820,7 +820,7 @@ function openExport() {
     <div class="fld"><label class="chk"><input type="radio" name="ex" value="xml" checked> Jadwal MS Project (.xml) – aktivitas, dependency, baseline, % selesai per ${fmtDn(ST.statusDn)}</label>
     <label class="chk"><input type="radio" name="ex" value="csv"> Rekap progres harian/mingguan (.csv)</label>
     <label class="chk"><input type="radio" name="ex" value="wbs"> Tabel kemajuan per aktivitas (.csv)</label>
-    <label class="chk"><input type="radio" name="ex" value="la"> Six-week look-ahead (.csv)</label>
+    <label class="chk"><input type="radio" name="ex" value="la"> Look-ahead 2/4/6 minggu, sesuai pilihan di tab Look-ahead (.csv)</label>
     <label class="chk"><input type="radio" name="ex" value="res"> Rencana kebutuhan alat &amp; material (.csv)</label>
     <label class="chk"><input type="radio" name="ex" value="pdf"> Laporan mingguan (.pdf)</label></div>
     ${dl ? '' : '<div class="hint">Unduhan tidak tersedia di tampilan ini. Isi file akan ditampilkan agar bisa disalin.</div>'}`,
@@ -831,7 +831,7 @@ async function doExport(kind) {
   if (kind === 'pdf') { setTimeout(openReport, 60); return; }
   let name, data; const safe = ST.proj.name.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'proyek';
   if (kind === 'xml') { name = safe + '.xml'; data = exportMSPDI(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); }
-  else if (kind === 'la') { const W = laWindow(); name = safe + '_lookahead_' + dnToIso(W.a) + '.csv'; data = laCsv(); }
+  else if (kind === 'la') { const W = laWindow(); name = safe + '_lookahead_' + W.n + 'mg_' + dnToIso(W.a) + '.csv'; data = laCsv(); }
   else if (kind === 'res') { name = safe + '_resource_' + ((ST.resZ || 'week') === 'month' ? 'bulanan' : 'mingguan') + '.csv'; data = resCsv(); }
   else if (kind === 'csv') {
     const rows = [['Tanggal', 'Periode', 'WBS', 'Aktivitas', 'Volume', 'Satuan', 'Catatan']];
@@ -1475,23 +1475,24 @@ function resCsv() {
   list.forEach(R => R.uses.forEach(u => rows.push([R.j === 'A' ? 'Alat' : 'Material', R.n, R.s, u.t.wbs, u.t.name, f(+u.r.k || 0), R.j === 'A' ? 'unit selama aktivitas' : u.r.per ? 'per ' + (u.t.unit || 'satuan') : 'total', f(u.need), dnToIso(u.days[0]), dnToIso(u.days[u.days.length - 1])])));
   return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\n');
 }
-/* ---------- Six-week look-ahead ---------- */
+/* ---------- Look-ahead 2 / 4 / 6 minggu ---------- */
 const LK_LABEL = { ok: 'Siap', con: 'Ada kendala', '': 'Belum dicek' };
-function laWindow() { const base = ST.statusDn - ((dnDow(ST.statusDn) + 6) % 7) + 7 * (ST.laOff || 0); return { a: base, b: base + 41 }; }
+function laWeeks() { const n = +ST.laN || +LS.get('laN') || 6; return [2, 4, 6].includes(n) ? n : 6; }
+function laWindow() { const n = laWeeks(); const base = ST.statusDn - ((dnDow(ST.statusDn) + 6) % 7) + 7 * (ST.laOff || 0); return { a: base, b: base + n * 7 - 1, n }; }
 function laTasks(W) { return ST.tasks.filter(t => !t.sum && t.startDn <= W.b && t.finishDn >= W.a && (t.act || 0) < 0.9999); }
 function renderLA() {
   computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
   const W = laWindow(); const cal = ST.sched.cal; const sd = ST.statusDn; const f = ST.laF || 'all'; const admin = ST.canWrite;
   const all = laTasks(W); const list = all.filter(t => f === 'all' || (f === 'crit' && t.crit) || (f === 'con' && t.lk && t.lk.s === 'con') || (f === 'nc' && !(t.lk && t.lk.s)));
   const nCon = all.filter(t => t.lk && t.lk.s === 'con').length, nOk = all.filter(t => t.lk && t.lk.s === 'ok').length, nCrit = all.filter(t => t.crit).length;
-  const days = Array.from({ length: 42 }, (_, i) => W.a + i);
+  const days = Array.from({ length: W.n * 7 }, (_, i) => W.a + i);
   const dm = dn => { const d = new Date(dn * DAY); return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
   const startMon = ST.sched.startDn - ((dnDow(ST.sched.startDn) + 6) % 7);
-  const wkHead = [0, 1, 2, 3, 4, 5].map(i => { const a = W.a + i * 7; const no = Math.floor((a - startMon) / 7) + 1; return `<th class="wk" colspan="7">Mg ${no}<small>${dm(a)}–${dm(a + 6)}</small></th>`; }).join('');
+  const wkHead = Array.from({ length: W.n }, (_, i) => i).map(i => { const a = W.a + i * 7; const no = Math.floor((a - startMon) / 7) + 1; return `<th class="wk" colspan="7">Mg ${no}<small>${dm(a)}–${dm(a + 6)}</small></th>`; }).join('');
   const dayHead = days.map((d, i) => `<th class="dc ${i % 7 === 0 ? 'wl' : ''}" style="${d === sd ? 'color:var(--today);font-weight:700' : ''}">${DOWS[dnDow(d)][0]}</th>`).join('');
   // kelompokkan per induk
   const groups = []; const gi = new Map(); list.forEach(t => { const g = t.parent || null; const k = g ? g.uid : '_'; if (!gi.has(k)) { gi.set(k, groups.length); groups.push({ g, items: [] }); } groups[gi.get(k)].items.push(t); });
-  const rowsHtml = groups.map(({ g, items }) => (g ? `<tr class="lg"><td class="st">${g.wbs} ${H(g.name)}</td><td colspan="7"></td><td colspan="42" class="wl"></td></tr>` : '') + items.map(t => {
+  const rowsHtml = groups.map(({ g, items }) => (g ? `<tr class="lg"><td class="st">${g.wbs} ${H(g.name)}</td><td colspan="7"></td><td colspan="${W.n * 7}" class="wl"></td></tr>` : '') + items.map(t => {
     const lk = t.lk || { s: '', n: '' }; const q = t.qty ? actualQty(ST.prog, t.uid, sd) : 0;
     const cells = days.map((d, i) => { const on = d >= t.startDn && d <= t.finishDn; const w = cal.isWork(d);
       const mk = t.ms ? (d === t.startDn ? '<i class="ms"></i>' : '') : (on && w ? `<i class="${t.crit ? 'c' : ''}"></i>` : '');
@@ -1505,30 +1506,32 @@ function renderLA() {
   }).join('')).join('');
   // resource per minggu
   const filt = new Set(all.map(t => t.uid)); const rp_ = resPlan(filt);
-  const wk = [0, 1, 2, 3, 4, 5].map(i => ({ a: W.a + i * 7, b: W.a + i * 7 + 6 }));
+  const wk = Array.from({ length: W.n }, (_, i) => i).map(i => ({ a: W.a + i * 7, b: W.a + i * 7 + 6 }));
   const rrows = rp_.map(R => ({ R, v: wk.map(w => resVal(R.daily, R.j, w.a, w.b)) })).filter(x => x.v.some(Boolean));
   $('#main').innerHTML = `<div class="view scroll"><div class="wrap">
-    <div class="dhead"><h2>Six-week look-ahead<small>${fmtLong(W.a)} – ${fmtLong(W.b)} · aktivitas yang dijadwalkan berjalan dan belum selesai, mengikuti jadwal saat ini</small></h2>
+    <div class="dhead"><h2>Look-ahead ${W.n} minggu<small>${fmtLong(W.a)} – ${fmtLong(W.b)} · aktivitas yang dijadwalkan berjalan dan belum selesai, mengikuti jadwal saat ini</small></h2>
+      <div class="seg" role="group" aria-label="Rentang look-ahead">${[2, 4, 6].map(n => `<button data-ln="${n}" aria-pressed="${W.n === n}">${n} minggu</button>`).join('')}</div>
       <div class="seg" role="group" aria-label="Geser jendela"><button data-lo="-1" aria-label="Minggu sebelumnya">‹ Mg</button><button data-lo="0" aria-pressed="${!ST.laOff}">Minggu ini</button><button data-lo="1" aria-label="Minggu berikutnya">Mg ›</button></div>
       <div class="fld"><label for="lDate">Tanggal status</label><input id="lDate" type="date" value="${dnToIso(sd)}"></div>
       <button class="btn" id="lCsv">Ekspor CSV</button></div>
     <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
-      <div class="kpi"><div class="k">Aktivitas di jendela</div><div class="v">${all.length}</div><div class="s">6 minggu</div></div>
+      <div class="kpi"><div class="k">Aktivitas di jendela</div><div class="v">${all.length}</div><div class="s">${W.n} minggu</div></div>
       <div class="kpi ${nCrit ? 'warn' : ''}"><div class="k">Di jalur kritis</div><div class="v">${nCrit}</div><div class="s">float 0 hari</div></div>
       <div class="kpi good"><div class="k">Siap dikerjakan</div><div class="v">${nOk}</div><div class="s">kendala sudah dibereskan</div></div>
       <div class="kpi ${nCon ? 'bad' : ''}"><div class="k">Ada kendala</div><div class="v">${nCon}</div><div class="s">${all.length - nOk - nCon} belum dicek</div></div>
     </div>
-    <section class="card" style="margin-bottom:16px"><div class="hd"><h2>Jadwal 6 minggu</h2><span class="sub">Tandai kesiapan tiap aktivitas: material, alat, tenaga, gambar kerja, izin, dan pekerjaan pendahulu.</span>
+    <section class="card" style="margin-bottom:16px"><div class="hd"><h2>Jadwal ${W.n} minggu</h2><span class="sub">Tandai kesiapan tiap aktivitas: material, alat, tenaga, gambar kerja, izin, dan pekerjaan pendahulu.</span>
       <div class="seg" role="group" style="margin-left:auto">${[['all', 'Semua'], ['crit', 'Kritis'], ['con', 'Ada kendala'], ['nc', 'Belum dicek']].map(([v, l]) => `<button data-lf="${v}" aria-pressed="${f === v}">${l}</button>`).join('')}</div></div>
       ${list.length ? `<div class="tw" style="max-height:72vh;overflow:auto"><table class="lagrid"><thead>
         <tr><th class="st" rowspan="2">Aktivitas</th><th class="n" rowspan="2">Mulai</th><th class="n" rowspan="2">Selesai</th><th class="n" rowspan="2">Sisa volume</th><th class="n" rowspan="2">Real.</th><th rowspan="2">Float</th><th rowspan="2">Kesiapan</th><th rowspan="2">Kendala / tindakan</th>${wkHead}</tr>
-        <tr>${dayHead}</tr></thead><tbody>${rowsHtml}</tbody></table></div>` : `<div class="empty">${all.length ? 'Tidak ada aktivitas yang cocok dengan filter.' : 'Tidak ada aktivitas yang dijadwalkan pada 6 minggu ini.'}</div>`}
+        <tr>${dayHead}</tr></thead><tbody>${rowsHtml}</tbody></table></div>` : `<div class="empty">${all.length ? 'Tidak ada aktivitas yang cocok dengan filter.' : `Tidak ada aktivitas yang dijadwalkan pada ${W.n} minggu ini.`}</div>`}
     </section>
     <section class="card"><div class="hd"><h2>Kebutuhan alat &amp; material</h2><span class="sub">Dari resource aktivitas di jendela ini · material dijumlah per minggu, alat = unit maksimum</span></div>
-      ${rrows.length ? `<div class="tw"><table class="rgrid"><thead><tr><th class="st">Resource</th><th>Satuan</th>${wk.map((w, i) => `<th class="n ${sd >= w.a && sd <= w.b ? 'now' : ''}">Mg ${Math.floor((w.a - startMon) / 7) + 1}<small>${dm(w.a)}</small></th>`).join('')}<th class="n">Total 6 mg</th></tr></thead><tbody>
+      ${rrows.length ? `<div class="tw"><table class="rgrid"><thead><tr><th class="st">Resource</th><th>Satuan</th>${wk.map((w, i) => `<th class="n ${sd >= w.a && sd <= w.b ? 'now' : ''}">Mg ${Math.floor((w.a - startMon) / 7) + 1}<small>${dm(w.a)}</small></th>`).join('')}<th class="n">Total ${W.n} mg</th></tr></thead><tbody>
         ${rrows.map(({ R, v }) => `<tr><td class="st" title="${H(R.n)}"><span class="rtag ${R.j}">${R.j === 'A' ? 'ALAT' : 'MAT'}</span>${H(R.n)}</td><td>${H(R.s)}</td>${v.map((x, i) => `<td class="b ${sd >= wk[i].a && sd <= wk[i].b ? 'now' : ''}">${resFmt(x)}</td>`).join('')}<td class="n">${R.j === 'A' ? resFmt(Math.max(...v)) : resFmt(v.reduce((a, b) => a + b, 0))}</td></tr>`).join('')}
       </tbody></table></div>` : `<div class="empty" style="padding:16px">Belum ada resource pada aktivitas di jendela ini. Tambahkan lewat panel detail aktivitas di tab <b>Jadwal</b>.</div>`}
     </section></div></div>`;
+  $$('[data-ln]').forEach(b => b.onclick = () => { ST.laN = +b.dataset.ln; LS.set('laN', ST.laN); renderLA(); });
   $$('[data-lo]').forEach(b => b.onclick = () => { const d = +b.dataset.lo; ST.laOff = d ? (ST.laOff || 0) + d : 0; renderLA(); });
   $$('[data-lf]').forEach(b => b.onclick = () => { ST.laF = b.dataset.lf; renderLA(); });
   $('#lDate').onchange = e => { ST.statusDn = isoToDn(e.target.value) || TODAY; ST.laOff = 0; recalc(); renderLA(); };
@@ -1541,8 +1544,8 @@ function renderLA() {
 }
 function laCsv() {
   computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
-  const W = laWindow(); const cal = ST.sched.cal; const days = Array.from({ length: 42 }, (_, i) => W.a + i);
-  const rows = [['Six-week look-ahead', ST.proj.name, dnToIso(W.a) + ' s.d. ' + dnToIso(W.b)], [], ['WBS', 'Kelompok', 'Aktivitas', 'Mulai', 'Selesai', 'Sisa volume', 'Satuan', 'Realisasi %', 'Kritis', 'Float (hari)', 'Kesiapan', 'Kendala / tindakan', ...days.map(dnToIso)]];
+  const W = laWindow(); const cal = ST.sched.cal; const days = Array.from({ length: W.n * 7 }, (_, i) => W.a + i);
+  const rows = [['Look-ahead ' + W.n + ' minggu', ST.proj.name, dnToIso(W.a) + ' s.d. ' + dnToIso(W.b)], [], ['WBS', 'Kelompok', 'Aktivitas', 'Mulai', 'Selesai', 'Sisa volume', 'Satuan', 'Realisasi %', 'Kritis', 'Float (hari)', 'Kesiapan', 'Kendala / tindakan', ...days.map(dnToIso)]];
   laTasks(W).forEach(t => { const lk = t.lk || {}; rows.push([t.wbs, t.parent ? t.parent.name : '', t.name, dnToIso(t.startDn), dnToIso(t.finishDn), t.qty ? Math.max(0, t.qty - actualQty(ST.prog, t.uid, ST.statusDn)) : '', t.unit || '', Math.round((t.act || 0) * 100), t.crit ? 'Ya' : '', Math.round(t.float || 0), LK_LABEL[lk.s || ''], lk.n || '', ...days.map(d => (t.ms ? d === t.startDn : d >= t.startDn && d <= t.finishDn && cal.isWork(d)) ? 'x' : '')]); });
   return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\n');
 }
