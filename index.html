@@ -1,0 +1,1234 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Kendali Jadwal Proyek</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: aplikasi satu layar — bilah atas + tab (Jadwal | Progres | Dashboard); Gantt dua panel tersinkron */
+:root{
+  --bg:#F2F4F3; --panel:#FFFFFF; --ink:#18211F; --muted:#5D6A66; --faint:#8A9692; --line:#D9E0DD; --line2:#ECF0EE; --row-alt:#F8FAF9;
+  --accent:#0D6B5F; --accent-ink:#FFFFFF; --accent-soft:#DCEDE9;
+  --bar:#3E7FA5; --bar-prog:#1C4C68; --crit:#C0402C; --crit-prog:#842816; --base:#B3BCB9; --sum:#26302D; --plan:#7A8783;
+  --good:#2C8550; --good-soft:#DDF0E3; --warn:#B57E0E; --warn-soft:#F7EBCB; --bad:#C0402C; --bad-soft:#F7DDD8; --today:#D97A22; --nonwork:#EEF1F0;
+  --f-display:'Archivo','Arial Narrow',system-ui,sans-serif; --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --r:6px; --rh:30px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1514; --panel:#161E1D; --ink:#E3EAE7; --muted:#97A5A0; --faint:#6E7C78; --line:#2A3533; --line2:#1E2826; --row-alt:#131A19;
+  --accent:#3DB4A1; --accent-ink:#06201C; --accent-soft:#163833;
+  --bar:#4E8DB4; --bar-prog:#A4D0EA; --crit:#E0644E; --crit-prog:#F6B2A5; --base:#4E5B58; --sum:#D6DFDC; --plan:#8E9C98;
+  --good:#4DBA78; --good-soft:#173826; --warn:#E0A93A; --warn-soft:#3A2F14; --bad:#E86A55; --bad-soft:#3E1D18; --today:#F0963F; --nonwork:#121918;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1514; --panel:#161E1D; --ink:#E3EAE7; --muted:#97A5A0; --faint:#6E7C78; --line:#2A3533; --line2:#1E2826; --row-alt:#131A19;
+  --accent:#3DB4A1; --accent-ink:#06201C; --accent-soft:#163833;
+  --bar:#4E8DB4; --bar-prog:#A4D0EA; --crit:#E0644E; --crit-prog:#F6B2A5; --base:#4E5B58; --sum:#D6DFDC; --plan:#8E9C98;
+  --good:#4DBA78; --good-soft:#173826; --warn:#E0A93A; --warn-soft:#3A2F14; --bad:#E86A55; --bad-soft:#3E1D18; --today:#F0963F; --nonwork:#121918;
+  color-scheme:dark }
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:13.5px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,td.n,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* Bilah atas */
+.top{background:var(--panel);border-bottom:1px solid var(--line);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;flex:none}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1 1 220px}
+.brand small{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.brand h1{margin:0;font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:19px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:2px;background:var(--line2);padding:3px;border-radius:8px}
+.tabs button{border:0;background:transparent;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:500;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.save i{width:7px;height:7px;border-radius:50%;background:var(--good);display:inline-block}
+.save.busy i{background:var(--warn)} .save.err i{background:var(--bad)} .save.local i{background:var(--faint)}
+
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 11px;border-radius:var(--r);cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:500;font-size:13px}
+.btn:hover{border-color:var(--faint)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--line2)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:15px;height:15px;flex:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:5px 10px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600}
+
+.banner{flex:none;background:var(--warn-soft);color:var(--ink);padding-block:7px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));font-size:12.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.banner b{font-weight:600}
+
+main{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:flex;flex-direction:column}
+.view.scroll{overflow:auto;display:block}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px;max-width:1320px;margin:0 auto}
+
+/* Toolbar Gantt */
+.tb{flex:none;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--panel)}
+.tb .sep{width:1px;height:22px;background:var(--line)}
+.legend{display:flex;gap:12px;align-items:center;font-size:11.5px;color:var(--muted);margin-left:auto;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:18px;height:8px;border-radius:2px}
+
+/* Gantt */
+.gantt{flex:1;min-height:0;display:grid;grid-template-columns:var(--lw,600px) 5px minmax(0,1fr);background:var(--panel)}
+.gl{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.split{cursor:col-resize;background:var(--line2)} .split:hover{background:var(--accent-soft)}
+.gh{height:48px;flex:none;border-bottom:1px solid var(--line);background:var(--panel)}
+.glb{flex:1;overflow-y:auto;overflow-x:auto;scrollbar-width:none}
+.glb::-webkit-scrollbar{display:none}
+.r{display:grid;grid-template-columns:var(--cols);height:var(--rh);align-items:center;border-bottom:1px solid var(--line2);cursor:pointer}
+.r>div{padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.r .c-n{font-family:var(--f-mono);font-size:11.5px;color:var(--faint);text-align:right}
+.r .c-w{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.r .c-d,.r .c-s,.r .c-f,.r .c-p,.r .c-pc{font-family:var(--f-mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+.r .c-pc{text-align:right}
+.r.sum{font-weight:600} .r.sum .c-name{font-family:var(--f-display);font-stretch:90%;font-size:13px;letter-spacing:.01em}
+.r.sel{background:var(--accent-soft)} .r:hover:not(.sel){background:var(--row-alt)}
+.r.crit .c-name{color:var(--crit)}
+.r.head{height:48px;cursor:default;border-bottom:0;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:transparent}
+.r.head>div{font-size:10.5px;font-family:var(--f-body)}
+.c-name{display:flex;align-items:center;gap:4px}
+.car{width:16px;height:16px;border:0;background:none;padding:0;cursor:pointer;color:var(--muted);flex:none;display:inline-grid;place-items:center}
+.car svg{width:12px;height:12px;transition:transform .15s}
+.car.closed svg{transform:rotate(-90deg)}
+.gr{overflow:auto;position:relative;min-width:0}
+.gr .gh{position:sticky;top:0;z-index:3}
+.gr svg{display:block}
+#gsvg .bar{cursor:grab} #gsvg .bar.drag{cursor:grabbing;opacity:.8}
+#gsvg text{font-family:var(--f-body)}
+.ro #gsvg .bar{cursor:pointer}
+
+/* Laci edit */
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(360px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.08);z-index:20;display:flex;flex-direction:column}
+.drawer header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.drawer header h3{margin:0;font-family:var(--f-display);font-stretch:90%;font-size:16px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drawer .body{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.drawer footer{border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld label,.lbl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.fld input,.fld select,.fld textarea,.inp{border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:6px 8px;width:100%;min-width:0}
+.fld input:focus,.inp:focus{border-color:var(--accent);outline:none;background:var(--panel)}
+.fld .hint{font-size:11.5px;color:var(--faint)}
+.fld .err{font-size:11.5px;color:var(--bad)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--f-mono);font-size:12px}
+.boxed{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--row-alt)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;background:var(--line2);color:var(--muted);white-space:nowrap}
+.chip.crit{background:var(--bad-soft);color:var(--bad)}
+.chip.good{background:var(--good-soft);color:var(--good)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px}
+
+/* Kartu umum */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.card>.hd{padding:12px 16px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card>.hd h2{margin:0;font-family:var(--f-display);font-stretch:88%;font-weight:700;font-size:16px;letter-spacing:.005em;text-wrap:balance}
+.card>.hd .sub{color:var(--muted);font-size:12.5px}
+.card>.bd{padding:14px 16px}
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.grp td{background:var(--row-alt);font-weight:600;font-size:12px;color:var(--muted)}
+.pbar{height:6px;background:var(--line2);border-radius:3px;position:relative;min-width:70px;overflow:hidden}
+.pbar>i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:3px}
+.pbar>b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.55}
+
+/* Progres */
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.pform{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.pform .fld{flex:0 1 auto}
+.pform .fld.grow{flex:1 1 260px}
+.qin{width:96px;text-align:right;font-family:var(--f-mono)}
+.uin{width:62px} .tin{width:84px;text-align:right;font-family:var(--f-mono)} .nin{width:150px}
+.hist{max-height:620px;overflow:auto}
+.hi{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:9px 16px;border-bottom:1px solid var(--line2);align-items:start}
+.hi .d{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:1px}
+.hi .w{font-size:12.5px;min-width:0}
+.hi .w small{display:block;color:var(--faint);font-size:11.5px}
+.hi .q{font-family:var(--f-mono);font-size:12.5px;text-align:right;white-space:nowrap}
+.hi .x{grid-column:3;justify-self:end}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+.empty h3{font-family:var(--f-display);font-stretch:90%;color:var(--ink);margin:0 0 6px;font-size:18px}
+
+/* Dashboard */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.kpi .k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.kpi .v{font-family:var(--f-display);font-stretch:80%;font-weight:700;font-size:30px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi.good .v{color:var(--good)} .kpi.warn .v{color:var(--warn)} .kpi.bad .v{color:var(--bad)}
+.dgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+.chart text{font-family:var(--f-mono);font-size:10.5px;fill:var(--muted)}
+.dhead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px}
+.dhead h2{margin:0;font-family:var(--f-display);font-stretch:85%;font-size:24px;font-weight:700;flex:1 1 260px;text-wrap:balance}
+.dhead h2 small{display:block;font-family:var(--f-body);font-size:12.5px;color:var(--muted);font-weight:400;font-stretch:100%}
+.evm{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.evm div{border-top:2px solid var(--line);padding-top:6px}
+.evm b{display:block;font-family:var(--f-mono);font-size:14px;font-weight:500}
+.evm span{font-size:11.5px;color:var(--muted)}
+
+/* Modal */
+.mb{position:fixed;inset:0;background:rgba(10,16,15,.45);z-index:50;display:grid;place-items:center;padding:16px}
+.md{background:var(--panel);border-radius:12px;width:min(520px,100%);max-height:90%;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.md header{padding:16px 18px 6px} .md header h3{margin:0;font-family:var(--f-display);font-stretch:88%;font-size:19px}
+.md .body{padding:8px 18px 4px;display:flex;flex-direction:column;gap:12px}
+.md footer{padding:14px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.on{border-color:var(--accent);background:var(--accent-soft)}
+.toasts{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;width:max-content;max-width:calc(100% - 32px);pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.load{display:grid;place-items:center;height:100%;color:var(--muted)}
+.wdays{display:flex;gap:4px;flex-wrap:wrap}
+.wdays label{border:1px solid var(--line);border-radius:5px;padding:4px 8px;font-size:12.5px;display:flex;gap:4px;align-items:center;cursor:pointer}
+
+.ro .edit-only{display:none!important}
+body:not(.role-admin) .admin-only{display:none!important}
+#asWrap[hidden]{display:none!important}
+body.role-pel .save span{display:inline}
+body.role-guest .save,body.role-pending .save{display:none}
+.banner.info{background:var(--accent-soft)}
+.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;font-weight:600;margin-left:4px}
+.gpick{border:1px solid var(--line);border-radius:6px;max-height:240px;overflow:auto;padding:4px 0}
+.gpick label{display:flex;gap:8px;align-items:center;padding:5px 8px;font-size:13px;cursor:pointer}
+.gpick label:hover{background:var(--row-alt)}
+.treq{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line2)}
+.tres{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:10;overflow:hidden}
+.tres button{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;padding:8px 12px;cursor:pointer;text-align:left}
+.tres button:hover,.tres button:focus-visible{background:var(--row-alt)}
+.tres img{width:24px;height:24px;border-radius:50%;flex:none}
+.tres span:first-of-type{flex:1;min-width:0}
+@media (max-width:1000px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .dgrid,.pgrid{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:720px){
+  .gantt{grid-template-columns:var(--lws,210px) 5px minmax(0,1fr)}
+  .r .c-w,.r .c-d,.r .c-s,.r .c-f,.r .c-p{display:none}
+  .r{grid-template-columns:30px minmax(0,1fr) 42px!important;min-width:0}
+  .legend{display:none}
+  .kpi .v{font-size:24px}
+  .tabs button{padding:6px 10px}
+  .top{gap:8px 10px}
+  .brand{flex-basis:100%}
+  .save span{display:none}
+  .acts .btn{padding:6px 9px}
+  .banner .long{display:none}
+  #pTable thead{display:none}
+  #pTable,#pTable tbody{display:block}
+  #pTable tr{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  #pTable td{display:block;border:0;padding:0;min-width:0!important}
+  #pTable td:first-child,#pTable td.qcell,#pTable td.ncell{grid-column:1/-1}
+  #pTable td[data-l]::before{content:attr(data-l);display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:3px;font-family:var(--f-body)}
+  #pTable td.n{text-align:left}
+  #pTable .qin,#pTable .tin,#pTable .uin,#pTable .nin{width:100%;text-align:left}
+  #pTable .qin{font-size:16px;padding:9px 10px}
+  #pTable .nin{font-size:16px}
+  .treq{align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="brand"><small>Kendali Jadwal · PMBOK</small><h1 id="pname">Memuat…</h1></div>
+  <nav class="tabs" role="tablist" hidden></nav>
+  <div class="acts">
+    <span id="asWrap" style="display:flex;align-items:center" hidden></span>
+    <span class="save" id="save"><i></i><span>–</span></span>
+    <button class="btn admin-only" id="bImport"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5 7m3 3 3-3M2.5 11v2.5h11V11"/></svg>Impor XML</button>
+    <button class="btn admin-only" id="bExport"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10V2m0 0L5 5m3-3 3 3M2.5 11v2.5h11V11"/></svg>Ekspor</button>
+  </div>
+</header>
+<div id="banner" class="banner" hidden></div>
+<main id="main"><div class="load">Memuat jadwal…</div></main>
+<input type="file" id="fileIn" accept=".xml,text/xml,application/xml" hidden>
+
+<script>
+/* ===== CORE: kalender, parser MSPDI, penjadwalan CPM, progres, ekspor ===== */
+const DAY = 864e5;
+const LINK_TYPES = ['FF', 'FS', 'SF', 'SS']; // indeks = kode Type MSPDI
+const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+function isoToDn(s) { if (!s) return null; const [y, m, d] = s.slice(0, 10).split('-').map(Number); return Math.floor(Date.UTC(y, m - 1, d) / DAY); }
+function dnToIso(dn) { return new Date(dn * DAY).toISOString().slice(0, 10); }
+function dnDow(dn) { return new Date(dn * DAY).getUTCDay(); }
+function fmtDn(dn, long) { if (dn == null) return '–'; const d = new Date(dn * DAY); const s = String(d.getUTCDate()).padStart(2, '0') + ' ' + MONTHS[d.getUTCMonth()]; return long === false ? s : s + ' ' + String(d.getUTCFullYear()).slice(2); }
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+/* Kalender kerja: indeks hari kerja <-> nomor hari */
+class Cal {
+  constructor(workdays, anchorDn) { this.wd = workdays && workdays.some(Boolean) ? workdays.slice() : [false, true, true, true, true, true, false]; this.base = anchorDn - 800; this.len = 0; this.build(4000); }
+  build(len) {
+    this.len = len; this.prefix = new Int32Array(len + 1); this.list = [];
+    let c = 0; for (let i = 0; i < len; i++) { this.prefix[i] = c; if (this.wd[dnDow(this.base + i)]) { this.list.push(this.base + i); c++; } } this.prefix[len] = c;
+  }
+  ensureDn(dn) { while (dn - this.base >= this.len - 2) this.build(this.len * 2); if (dn < this.base) { const shift = this.base - dn + 400; this.base -= shift; this.build(this.len + shift); } }
+  idx(dn) { this.ensureDn(dn); return this.prefix[dn - this.base]; } // hari libur -> hari kerja berikutnya
+  dn(idx) { idx = Math.max(0, Math.floor(idx)); while (idx >= this.list.length - 1) this.build(this.len * 2); return this.list[idx]; }
+  isWork(dn) { return this.wd[dnDow(dn)]; }
+}
+
+/* ---------- Parser XML MS Project (MSPDI) ---------- */
+function kid(el, name) { if (!el) return null; for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 1 && (c.localName || c.nodeName) === name) return c; return null; }
+function kids(el, name) { const r = []; if (!el) return r; for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 1 && (c.localName || c.nodeName) === name) r.push(c); return r; }
+function txt(el, name) { const k = kid(el, name); return k ? (k.textContent || '').trim() : ''; }
+function parseIsoDur(s) { // jam
+  if (!s) return 0; const m = /P(?:(\d+(?:\.\d+)?)D)?T?(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?/.exec(s); if (!m) return 0;
+  return (+m[1] || 0) * 24 + (+m[2] || 0) + (+m[3] || 0) / 60 + (+m[4] || 0) / 3600;
+}
+
+function parseMSPDI(xmlText, DOMParserImpl) {
+  const P = DOMParserImpl || DOMParser; const doc = new P().parseFromString(xmlText, 'application/xml');
+  const root = doc.documentElement; if (!root || (root.localName || root.nodeName) !== 'Project' || doc.getElementsByTagName('parsererror').length) throw new Error('File bukan XML MS Project (MSPDI). Di MS Project pilih File › Save As › XML Format (*.xml).');
+  const mpd = +txt(root, 'MinutesPerDay') || 480; const hpd = mpd / 60;
+  const calUid = txt(root, 'CalendarUID');
+  let workdays = [false, true, true, true, true, true, false];
+  const cals = kids(kid(root, 'Calendars'), 'Calendar'); const cal = cals.find(c => txt(c, 'UID') === calUid) || cals[0];
+  if (cal) { const wds = kids(kid(cal, 'WeekDays'), 'WeekDay'); const w = workdays.slice(); let seen = false; wds.forEach(wd => { const t = +txt(wd, 'DayType'); if (t >= 1 && t <= 7) { w[t - 1] = txt(wd, 'DayWorking') === '1'; seen = true; } }); if (seen && w.some(Boolean)) workdays = w; }
+  const tEls = kids(kid(root, 'Tasks'), 'Task'); const tasks = []; const importDn = Math.floor(Date.now() / DAY);
+  for (const el of tEls) {
+    const lvl = +txt(el, 'OutlineLevel'); const u = txt(el, 'UID'); if (u === '' || lvl === 0 || txt(el, 'IsNull') === '1') continue;
+    const name = txt(el, 'Name') || '(tanpa nama)';
+    const start = txt(el, 'Start').slice(0, 10), finish = txt(el, 'Finish').slice(0, 10);
+    let dur = parseIsoDur(txt(el, 'Duration')) / hpd; dur = Math.round(dur * 100) / 100;
+    const ms = txt(el, 'Milestone') === '1' || dur === 0;
+    const preds = kids(el, 'PredecessorLink').map(pl => ({ u: txt(pl, 'PredecessorUID'), t: LINK_TYPES[+txt(pl, 'Type')] || 'FS', lag: Math.round((+txt(pl, 'LinkLag') || 0) / 10 / mpd * 100) / 100 })).filter(p => p.u !== '');
+    const ct = +txt(el, 'ConstraintType'); const cd = txt(el, 'ConstraintDate').slice(0, 10);
+    let snet = null; if ((ct === 2 || ct === 4) && cd) snet = cd; else if (!preds.length) snet = start || null;
+    const bl = kids(el, 'Baseline').find(b => txt(b, 'Number') === '0' || txt(b, 'Number') === '');
+    const t = { uid: u, name, lvl, dur: ms ? 0 : dur, ms, snet, preds, cost: (+txt(el, 'Cost') || 0) / 100, unit: '', qty: 0, w: 0,
+      pct0: +txt(el, 'PercentComplete') || 0, pct0Dn: importDn, _start: start, _finish: finish,
+      bs: bl ? txt(bl, 'Start').slice(0, 10) : null, bf: bl ? txt(bl, 'Finish').slice(0, 10) : null, bd: bl ? Math.round(parseIsoDur(txt(bl, 'Duration')) / hpd * 100) / 100 : null };
+    if (!t.bs || !t.bf) { t.bs = t.bf = t.bd = null; }
+    const vm = /Volume\s*:\s*([\d.,]+)\s*([^\s<]*)/i.exec(txt(el, 'Notes')); if (vm) { t.qty = parseFloat(vm[1].replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')) || 0; t.unit = vm[2] || ''; }
+    tasks.push(t);
+  }
+  if (!tasks.length) throw new Error('Tidak ada tugas di dalam file XML.');
+  const minLvl = Math.min(...tasks.map(t => t.lvl)); tasks.forEach(t => t.lvl = t.lvl - minLvl + 1);
+  const pStart = (txt(root, 'StartDate') || '').slice(0, 10) || tasks.map(t => t._start).filter(Boolean).sort()[0];
+  const proj = { name: txt(root, 'Title') || txt(root, 'Name').replace(/\.(xml|mpp)$/i, '') || 'Proyek', start: pStart, mpd, workdays, weightMode: tasks.some(t => t.cost > 0) ? 'cost' : 'dur' };
+  return { proj, tasks };
+}
+
+/* ---------- Struktur outline + CPM ---------- */
+function buildOutline(tasks) {
+  const stack = []; const counters = [];
+  tasks.forEach((t, i) => {
+    if (t.lvl < 1) t.lvl = 1; if (i === 0) t.lvl = 1; else if (t.lvl > tasks[i - 1].lvl + 1) t.lvl = tasks[i - 1].lvl + 1;
+    while (stack.length && stack[stack.length - 1].lvl >= t.lvl) stack.pop();
+    t.parent = stack.length ? stack[stack.length - 1] : null; t.children = []; if (t.parent) t.parent.children.push(t);
+    counters.length = t.lvl; counters[t.lvl - 1] = (counters[t.lvl - 1] || 0) + 1; t.wbs = counters.slice(0, t.lvl).join('.');
+    t.id = i + 1; stack.push(t);
+  });
+  tasks.forEach(t => { t.sum = t.children.length > 0; });
+}
+
+function leavesOf(t, out = []) { if (!t.sum) out.push(t); else t.children.forEach(c => leavesOf(c, out)); return out; }
+
+function schedule(proj, tasks) {
+  buildOutline(tasks);
+  const byUid = new Map(tasks.map(t => [t.uid, t]));
+  const allStarts = tasks.map(t => t.snet || t._start).filter(Boolean).map(isoToDn);
+  const pStartDn = isoToDn(proj.start) || (allStarts.length ? Math.min(...allStarts) : Math.floor(Date.now() / DAY));
+  const cal = new Cal(proj.workdays, pStartDn);
+  const P0 = cal.idx(pStartDn);
+  const leaves = tasks.filter(t => !t.sum);
+  // tautan efektif = milik tugas + milik leluhurnya
+  const links = []; // {p, s, t, lag}  s = pemilik tautan (leaf atau summary)
+  tasks.forEach(s => (s.preds || []).forEach(l => { const p = byUid.get(String(l.u)); if (p && p !== s) links.push({ p, s, t: l.t || 'FS', lag: +l.lag || 0 }); }));
+  const linksTo = new Map(); links.forEach(L => { if (!linksTo.has(L.s)) linksTo.set(L.s, []); linksTo.get(L.s).push(L); });
+  const dur = t => (t.ms ? 0 : Math.max(0, +t.dur || 0));
+  leaves.forEach(t => { t.es = t.snet ? Math.max(cal.idx(isoToDn(t.snet)), P0) : P0; t.base = t.es; t.ef = t.es + dur(t); });
+  const rollup = () => { for (let i = tasks.length - 1; i >= 0; i--) { const t = tasks[i]; if (t.sum) { t.es = Math.min(...t.children.map(c => c.es)); t.ef = Math.max(...t.children.map(c => c.ef)); } } };
+  let iter = 0, changed = true; const maxIter = tasks.length + 10; let cycle = false;
+  while (changed) {
+    rollup(); changed = false; if (++iter > maxIter) { cycle = true; break; }
+    for (const t of leaves) {
+      let es = t.base; const d = dur(t);
+      for (let a = t; a; a = a.parent) { const ls = linksTo.get(a); if (!ls) continue;
+        for (const L of ls) { const p = L.p; let c; if (a !== t && (L.t === 'FF' || L.t === 'SF')) continue;
+          if (L.t === 'FS') c = p.ef + L.lag; else if (L.t === 'SS') c = p.es + L.lag; else if (L.t === 'FF') c = p.ef + L.lag - d; else c = p.es + L.lag - d;
+          if (c > es) es = c; } }
+      if (Math.abs(es - t.es) > 1e-9) { t.es = es; t.ef = es + d; changed = true; }
+    }
+  }
+  rollup();
+  const pEF = Math.max(...leaves.map(t => t.ef), P0);
+  // lintasan mundur
+  leaves.forEach(t => { t.lf = pEF; t.ls = t.lf - dur(t); });
+  const rollB = () => { for (let i = tasks.length - 1; i >= 0; i--) { const t = tasks[i]; if (t.sum) { t.ls = Math.min(...t.children.map(c => c.ls)); t.lf = Math.max(...t.children.map(c => c.lf)); } } };
+  changed = true; iter = 0;
+  while (changed && iter++ < maxIter) {
+    rollB(); changed = false;
+    for (const L of links) { const s = L.s; let lim;
+      for (const p of leavesOf(L.p)) { const d = dur(p);
+        if (L.t === 'FS') lim = s.ls - L.lag; else if (L.t === 'SS') lim = s.ls - L.lag + d; else if (L.t === 'FF') lim = s.lf - L.lag; else lim = s.lf - L.lag + d;
+        if (lim < p.lf - 1e-9) { p.lf = lim; p.ls = lim - d; changed = true; } } }
+  }
+  rollB();
+  leaves.forEach(t => { t.float = t.ls - t.es; t.crit = t.float <= 0.01; });
+  for (let i = tasks.length - 1; i >= 0; i--) { const t = tasks[i]; if (t.sum) { t.crit = t.children.some(c => c.crit); t.float = Math.min(...t.children.map(c => c.float)); } }
+  tasks.forEach(t => {
+    const span = t.ef - t.es; t.startDn = (!t.sum && span < 1e-9 && t.es > P0) ? cal.dn(Math.ceil(t.es) - 1) : cal.dn(t.es);
+    t.finishDn = span > 1e-9 ? cal.dn(Math.ceil(t.ef - 1e-9) - 1) : t.startDn;
+    t.calDur = t.sum ? Math.round(span * 100) / 100 : dur(t);
+    t.bsDn = isoToDn(t.bs); t.bfDn = isoToDn(t.bf);
+  });
+  return { cal, cycle, P0, pEF, startDn: cal.dn(P0), finishDn: cal.dn(Math.max(P0, Math.ceil(pEF - 1e-9) - 1)), links };
+}
+
+/* ---------- Progres & EVM ---------- */
+function weightOf(proj, t, totalCost) {
+  if (t.w > 0) return t.w;
+  if (proj.weightMode === 'cost' && totalCost > 0) return t.cost || 0;
+  return t.ms ? 0 : (t.bd != null ? t.bd : t.dur) || 0;
+}
+function plannedFrac(t, dn, cal) { // fraksi rencana baseline pada akhir hari dn
+  const s = t.bsDn != null ? t.bsDn : t.startDn, f = t.bfDn != null ? t.bfDn : t.finishDn;
+  if (dn < s) return 0; if (dn >= f) return 1;
+  const a = cal.idx(s), b = cal.idx(f + 1); if (b <= a) return dn >= s ? 1 : 0;
+  const now = cal.idx(dn + 1); return Math.max(0, Math.min(1, (now - a) / (b - a)));
+}
+function entriesOf(prog, u) { const d = prog[u]; if (!d || !d.e) return []; return Object.entries(d.e).map(([id, e]) => ({ id, ...e })).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0); }
+function actualQty(prog, u, dn) { let q = 0; for (const e of entriesOf(prog, u)) if (dn == null || isoToDn(e.d) <= dn) q += +e.q || 0; return q; }
+function actualFrac(t, prog, dn) {
+  const hasE = prog[t.uid] && prog[t.uid].e && Object.keys(prog[t.uid].e).length;
+  if (t.qty > 0 && (hasE || !(t.pct0 > 0))) { const q = actualQty(prog, t.uid, dn); return Math.max(0, Math.min(1, q / t.qty)); }
+  if (t.pct0 > 0 && (dn == null || dn >= (t.pct0Dn || 0))) return Math.min(1, t.pct0 / 100);
+  return 0;
+}
+function computeProgress(proj, tasks, sched, prog, dn) {
+  const leaves = tasks.filter(t => !t.sum); const totalCost = leaves.reduce((a, t) => a + (t.cost || 0), 0);
+  let W = 0; leaves.forEach(t => { t._w = weightOf(proj, t, totalCost); W += t._w; });
+  if (W <= 0) { leaves.forEach(t => { t._w = 1; }); W = leaves.length || 1; }
+  for (let i = tasks.length - 1; i >= 0; i--) { const t = tasks[i];
+    if (!t.sum) { t.plan = plannedFrac(t, dn, sched.cal); t.act = actualFrac(t, prog, dn); t.wt = t._w; }
+    else { t.wt = t.children.reduce((a, c) => a + c.wt, 0); t.plan = t.wt ? t.children.reduce((a, c) => a + c.plan * c.wt, 0) / t.wt : 0; t.act = t.wt ? t.children.reduce((a, c) => a + c.act * c.wt, 0) / t.wt : 0; }
+    t.bobot = t.wt / W * 100; }
+  const plan = leaves.reduce((a, t) => a + t.plan * t._w, 0) / W, act = leaves.reduce((a, t) => a + t.act * t._w, 0) / W;
+  return { plan, act, W, totalCost };
+}
+function sCurve(proj, tasks, sched, prog, statusDn) {
+  const leaves = tasks.filter(t => !t.sum); computeProgress(proj, tasks, sched, prog, statusDn);
+  const W = leaves.reduce((a, t) => a + t._w, 0) || 1;
+  let s = Infinity, f = -Infinity; leaves.forEach(t => { const a = t.bsDn != null ? t.bsDn : t.startDn, b = t.bfDn != null ? t.bfDn : t.finishDn; s = Math.min(s, a); f = Math.max(f, b); });
+  f = Math.max(f, statusDn); s = s - ((dnDow(s) + 6) % 7); // mulai Senin
+  const pts = []; for (let d = s; ; d += 7) { const e = Math.min(d + 6, f);
+    const plan = leaves.reduce((a, t) => a + plannedFrac(t, e, sched.cal) * t._w, 0) / W;
+    const act = e <= statusDn ? leaves.reduce((a, t) => a + actualFrac(t, prog, e) * t._w, 0) / W : null;
+    if (d <= statusDn && e > statusDn) { pts.push({ dn: statusDn, st: true, plan: leaves.reduce((a, t) => a + plannedFrac(t, statusDn, sched.cal) * t._w, 0) / W, act: leaves.reduce((a, t) => a + actualFrac(t, prog, statusDn) * t._w, 0) / W }); }
+    pts.push({ dn: e, plan, act }); if (e >= f) break; }
+  return pts;
+}
+
+/* ---------- Ekspor MSPDI ---------- */
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function exportMSPDI(proj, tasks, sched, prog, statusDn) {
+  const hpd = (proj.mpd || 480) / 60; const D = d => `PT${Math.round(d * hpd * 100) / 100}H0M0S`;
+  if (statusDn != null) computeProgress(proj, tasks, sched, prog, statusDn);
+  const out = [`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`, `<Project xmlns="http://schemas.microsoft.com/project">`,
+    `<Name>${esc(proj.name)}.xml</Name><Title>${esc(proj.name)}</Title><ScheduleFromStart>1</ScheduleFromStart>`,
+    `<StartDate>${dnToIso(sched.startDn)}T08:00:00</StartDate><FinishDate>${dnToIso(sched.finishDn)}T17:00:00</FinishDate>`,
+    `<MinutesPerDay>${proj.mpd || 480}</MinutesPerDay><MinutesPerWeek>${(proj.mpd || 480) * proj.workdays.filter(Boolean).length}</MinutesPerWeek><DaysPerMonth>20</DaysPerMonth><CalendarUID>1</CalendarUID>`,
+    `<Calendars><Calendar><UID>1</UID><Name>Standar</Name><IsBaseCalendar>1</IsBaseCalendar><WeekDays>`];
+  proj.workdays.forEach((w, i) => out.push(`<WeekDay><DayType>${i + 1}</DayType><DayWorking>${w ? 1 : 0}</DayWorking>${w ? '<WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTime></WorkingTimes>' : ''}</WeekDay>`));
+  out.push(`</WeekDays></Calendar></Calendars><Tasks>`);
+  out.push(`<Task><UID>0</UID><ID>0</ID><Name>${esc(proj.name)}</Name><OutlineLevel>0</OutlineLevel><Summary>1</Summary><Start>${dnToIso(sched.startDn)}T08:00:00</Start><Finish>${dnToIso(sched.finishDn)}T17:00:00</Finish></Task>`);
+  const num = new Map(); let n = 1; tasks.forEach(t => { if (!/^\d+$/.test(t.uid)) { while (tasks.some(x => x.uid === String(n)) || [...num.values()].includes(String(n))) n++; num.set(t.uid, String(n++)); } });
+  const U = u => num.get(u) || u;
+  tasks.forEach(t => {
+    const pct = Math.round((t.act || 0) * 100);
+    out.push(`<Task><UID>${U(t.uid)}</UID><ID>${t.id}</ID><Name>${esc(t.name)}</Name><WBS>${t.wbs}</WBS><OutlineNumber>${t.wbs}</OutlineNumber><OutlineLevel>${t.lvl}</OutlineLevel>` +
+      `<Start>${dnToIso(t.startDn)}T08:00:00</Start><Finish>${dnToIso(t.finishDn)}T17:00:00</Finish><Duration>${D(t.sum ? t.calDur : (t.ms ? 0 : t.dur))}</Duration><DurationFormat>7</DurationFormat>` +
+      `<Manual>0</Manual><Summary>${t.sum ? 1 : 0}</Summary><Milestone>${t.ms ? 1 : 0}</Milestone><Critical>${t.crit ? 1 : 0}</Critical><PercentComplete>${pct}</PercentComplete>` +
+      (t.cost ? `<Cost>${Math.round(t.cost * 100)}</Cost>` : '') +
+      (!t.sum && t.snet ? `<ConstraintType>4</ConstraintType><ConstraintDate>${t.snet}T08:00:00</ConstraintDate>` : '<ConstraintType>0</ConstraintType>') +
+      (!t.sum && t.unit ? `<Notes>${esc('Volume: ' + t.qty + ' ' + t.unit)}</Notes>` : '') +
+      (t.preds || []).map(l => `<PredecessorLink><PredecessorUID>${U(String(l.u))}</PredecessorUID><Type>${Math.max(0, LINK_TYPES.indexOf(l.t))}</Type><CrossProject>0</CrossProject><LinkLag>${Math.round((+l.lag || 0) * (proj.mpd || 480) * 10)}</LinkLag><LagFormat>7</LagFormat></PredecessorLink>`).join('') +
+      (t.bs ? `<Baseline><Number>0</Number><Start>${t.bs}T08:00:00</Start><Finish>${t.bf}T17:00:00</Finish><Duration>${D(t.bd || 0)}</Duration></Baseline>` : '') + `</Task>`);
+  });
+  out.push(`</Tasks></Project>`); return out.join('\n');
+}
+
+/* ---------- Teks predecessor ---------- */
+function predsToText(t, byUid) { return (t.preds || []).map(l => { const p = byUid.get(String(l.u)); if (!p) return ''; const lag = +l.lag || 0; return p.id + (l.t !== 'FS' || lag ? l.t : '') + (lag ? (lag > 0 ? '+' : '') + lag + 'h' : ''); }).filter(Boolean).join(', '); }
+function textToPreds(s, tasks) {
+  const out = []; const errs = [];
+  String(s || '').split(/[,;]/).map(x => x.trim()).filter(Boolean).forEach(tok => {
+    const m = /^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+(?:[.,]\d+)?)?\s*(h|hari|d)?$/i.exec(tok);
+    if (!m) { errs.push(tok); return; } const t = tasks[+m[1] - 1]; if (!t) { errs.push(tok); return; }
+    out.push({ u: t.uid, t: (m[2] || 'FS').toUpperCase(), lag: m[3] ? +m[3].replace(/\s/g, '').replace(',', '.') : 0 });
+  });
+  return { preds: out, errs };
+}
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { Cal, parseMSPDI, schedule, computeProgress, sCurve, exportMSPDI, textToPreds, predsToText, isoToDn, dnToIso, fmtDn, entriesOf, actualQty, plannedFrac, leavesOf, uid, dnDow };
+
+const SAMPLE = {"proj":{"name":"Gedung Kantor 3 Lantai — Cikarang","start":"2026-07-06","mpd":480,"workdays":[false,true,true,true,true,true,true],"weightMode":"cost"},"tasks":[{"uid":"1","name":"Pekerjaan Persiapan","lvl":1,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-07-06","bf":"2026-07-11","bd":null},{"uid":"2","name":"Mobilisasi alat & direksi keet","lvl":2,"dur":6,"ms":false,"snet":null,"preds":[],"unit":"ls","qty":1,"cost":85000000,"w":0,"pct0":0,"bs":"2026-07-06","bf":"2026-07-11","bd":6},{"uid":"3","name":"Pengukuran & bouwplank","lvl":2,"dur":4,"ms":false,"snet":null,"preds":[{"u":"2","t":"SS","lag":2}],"unit":"m","qty":180,"cost":18000000,"w":0,"pct0":0,"bs":"2026-07-08","bf":"2026-07-11","bd":4},{"uid":"4","name":"Pagar sementara proyek","lvl":2,"dur":6,"ms":false,"snet":null,"preds":[{"u":"2","t":"SS","lag":0}],"unit":"m","qty":220,"cost":66000000,"w":0,"pct0":0,"bs":"2026-07-06","bf":"2026-07-11","bd":6},{"uid":"5","name":"Pekerjaan Tanah & Pondasi","lvl":1,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-07-13","bf":"2026-08-22","bd":null},{"uid":"6","name":"Galian tanah pondasi","lvl":2,"dur":12,"ms":false,"snet":null,"preds":[{"u":"3","t":"FS","lag":0}],"unit":"m³","qty":640,"cost":96000000,"w":0,"pct0":0,"bs":"2026-07-13","bf":"2026-07-25","bd":12},{"uid":"7","name":"Pemancangan tiang spun pile Ø40","lvl":2,"dur":22,"ms":false,"snet":null,"preds":[{"u":"6","t":"SS","lag":4}],"unit":"titik","qty":96,"cost":1150000000,"w":0,"pct0":0,"bs":"2026-07-17","bf":"2026-08-06","bd":18},{"uid":"8","name":"Pile cap & tie beam","lvl":2,"dur":16,"ms":false,"snet":null,"preds":[{"u":"7","t":"SS","lag":8}],"unit":"m³","qty":210,"cost":610000000,"w":0,"pct0":0,"bs":"2026-07-27","bf":"2026-08-13","bd":16},{"uid":"9","name":"Urugan kembali & pemadatan","lvl":2,"dur":8,"ms":false,"snet":null,"preds":[{"u":"8","t":"FS","lag":0}],"unit":"m³","qty":380,"cost":57000000,"w":0,"pct0":0,"bs":"2026-08-14","bf":"2026-08-22","bd":8},{"uid":"10","name":"Struktur Atas","lvl":1,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-08-14","bf":"2026-11-21","bd":null},{"uid":"11","name":"Lantai 1","lvl":2,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-08-14","bf":"2026-09-10","bd":null},{"uid":"12","name":"Kolom Lt.1","lvl":3,"dur":10,"ms":false,"snet":null,"preds":[{"u":"8","t":"FS","lag":0}],"unit":"m³","qty":48,"cost":190000000,"w":0,"pct0":0,"bs":"2026-08-14","bf":"2026-08-25","bd":10},{"uid":"13","name":"Balok & pelat Lt.2","lvl":3,"dur":14,"ms":false,"snet":null,"preds":[{"u":"12","t":"FS","lag":0}],"unit":"m²","qty":820,"cost":640000000,"w":0,"pct0":0,"bs":"2026-08-26","bf":"2026-09-10","bd":14},{"uid":"14","name":"Lantai 2","lvl":2,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-09-19","bf":"2026-10-16","bd":null},{"uid":"15","name":"Kolom Lt.2","lvl":3,"dur":10,"ms":false,"snet":null,"preds":[{"u":"13","t":"FS","lag":9}],"unit":"m³","qty":44,"cost":175000000,"w":0,"pct0":0,"bs":"2026-09-19","bf":"2026-09-30","bd":10},{"uid":"16","name":"Balok & pelat Lt.3","lvl":3,"dur":14,"ms":false,"snet":null,"preds":[{"u":"15","t":"FS","lag":0}],"unit":"m²","qty":820,"cost":640000000,"w":0,"pct0":0,"bs":"2026-10-01","bf":"2026-10-16","bd":14},{"uid":"17","name":"Lantai 3 & Atap","lvl":2,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-10-26","bf":"2026-11-21","bd":null},{"uid":"18","name":"Kolom Lt.3","lvl":3,"dur":10,"ms":false,"snet":null,"preds":[{"u":"16","t":"FS","lag":7}],"unit":"m³","qty":40,"cost":160000000,"w":0,"pct0":0,"bs":"2026-10-26","bf":"2026-11-05","bd":10},{"uid":"19","name":"Ring balk & rangka atap baja ringan","lvl":3,"dur":12,"ms":false,"snet":null,"preds":[{"u":"18","t":"FS","lag":0}],"unit":"m²","qty":860,"cost":310000000,"w":0,"pct0":0,"bs":"2026-11-06","bf":"2026-11-19","bd":12},{"uid":"20","name":"Penutup atap metal sandwich","lvl":3,"dur":8,"ms":false,"snet":null,"preds":[{"u":"19","t":"SS","lag":6}],"unit":"m²","qty":860,"cost":240000000,"w":0,"pct0":0,"bs":"2026-11-13","bf":"2026-11-21","bd":8},{"uid":"21","name":"Pekerjaan Arsitektur","lvl":1,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-09-17","bf":"2026-12-22","bd":null},{"uid":"22","name":"Pasangan dinding bata ringan","lvl":2,"dur":30,"ms":false,"snet":null,"preds":[{"u":"13","t":"FS","lag":5}],"unit":"m²","qty":2400,"cost":430000000,"w":0,"pct0":0,"bs":"2026-09-17","bf":"2026-10-21","bd":30},{"uid":"23","name":"Plesteran & acian","lvl":2,"dur":30,"ms":false,"snet":null,"preds":[{"u":"22","t":"SS","lag":10}],"unit":"m²","qty":4600,"cost":320000000,"w":0,"pct0":0,"bs":"2026-09-29","bf":"2026-11-02","bd":30},{"uid":"24","name":"Keramik lantai 60×60","lvl":2,"dur":24,"ms":false,"snet":null,"preds":[{"u":"23","t":"SS","lag":12}],"unit":"m²","qty":2300,"cost":520000000,"w":0,"pct0":0,"bs":"2026-10-13","bf":"2026-11-09","bd":24},{"uid":"25","name":"Kusen, pintu & jendela aluminium","lvl":2,"dur":18,"ms":false,"snet":null,"preds":[{"u":"23","t":"SS","lag":14}],"unit":"unit","qty":186,"cost":610000000,"w":0,"pct0":0,"bs":"2026-10-15","bf":"2026-11-04","bd":18},{"uid":"26","name":"Plafon gypsum","lvl":2,"dur":18,"ms":false,"snet":null,"preds":[{"u":"20","t":"FS","lag":0}],"unit":"m²","qty":2200,"cost":280000000,"w":0,"pct0":0,"bs":"2026-11-23","bf":"2026-12-12","bd":18},{"uid":"27","name":"Pengecatan interior & eksterior","lvl":2,"dur":20,"ms":false,"snet":null,"preds":[{"u":"26","t":"SS","lag":6}],"unit":"m²","qty":7800,"cost":350000000,"w":0,"pct0":0,"bs":"2026-11-30","bf":"2026-12-22","bd":20},{"uid":"28","name":"Pekerjaan MEP","lvl":1,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-10-01","bf":"2026-12-17","bd":null},{"uid":"29","name":"Instalasi listrik & penerangan","lvl":2,"dur":34,"ms":false,"snet":null,"preds":[{"u":"15","t":"FS","lag":0}],"unit":"titik","qty":640,"cost":720000000,"w":0,"pct0":0,"bs":"2026-10-01","bf":"2026-11-09","bd":34},{"uid":"30","name":"Plumbing air bersih & kotor","lvl":2,"dur":30,"ms":false,"snet":null,"preds":[{"u":"15","t":"FS","lag":5}],"unit":"m","qty":1450,"cost":430000000,"w":0,"pct0":0,"bs":"2026-10-07","bf":"2026-11-10","bd":30},{"uid":"31","name":"Instalasi tata udara (AC)","lvl":2,"dur":16,"ms":false,"snet":null,"preds":[{"u":"26","t":"SS","lag":6}],"unit":"unit","qty":42,"cost":560000000,"w":0,"pct0":0,"bs":"2026-11-30","bf":"2026-12-17","bd":16},{"uid":"32","name":"Penyelesaian","lvl":1,"dur":0,"ms":false,"snet":null,"preds":[],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-12-18","bf":"2026-12-28","bd":null},{"uid":"33","name":"Testing & commissioning","lvl":2,"dur":8,"ms":false,"snet":null,"preds":[{"u":"29","t":"FS","lag":0},{"u":"30","t":"FS","lag":0},{"u":"31","t":"FS","lag":0}],"unit":"ls","qty":1,"cost":60000000,"w":0,"pct0":0,"bs":"2026-12-18","bf":"2026-12-26","bd":8},{"uid":"34","name":"Pembersihan akhir","lvl":2,"dur":5,"ms":false,"snet":null,"preds":[{"u":"27","t":"FS","lag":0},{"u":"33","t":"SS","lag":3}],"unit":"m²","qty":2400,"cost":36000000,"w":0,"pct0":0,"bs":"2026-12-23","bf":"2026-12-28","bd":5},{"uid":"35","name":"Serah terima pertama (PHO)","lvl":2,"dur":0,"ms":true,"snet":null,"preds":[{"u":"33","t":"FS","lag":0},{"u":"34","t":"FS","lag":0}],"unit":"","qty":0,"cost":0,"w":0,"pct0":0,"bs":"2026-12-28","bf":"2026-12-28","bd":0}],"prog":{"2":{"uid":"2","e":{"uiewszhm":{"d":"2026-07-12","p":"W","q":1,"n":""}}},"3":{"uid":"3","e":{"99pyvbm9":{"d":"2026-07-14","p":"W","q":162,"n":""},"kwnfky6h":{"d":"2026-07-21","p":"W","q":18,"n":""}}},"4":{"uid":"4","e":{"h8wapxoc":{"d":"2026-07-12","p":"W","q":211,"n":""},"n8ea1kcn":{"d":"2026-07-19","p":"W","q":8,"n":""},"1cjxqmms":{"d":"2026-07-26","p":"W","q":1,"n":""}}},"6":{"uid":"6","e":{"lsjaf5a7":{"d":"2026-07-19","p":"W","q":312,"n":""},"j87dmy2d":{"d":"2026-07-26","p":"W","q":299,"n":""},"q8gsa9er":{"d":"2026-08-02","p":"W","q":18,"n":""},"n9qdgen7":{"d":"2026-08-09","p":"W","q":7,"n":""},"yo4a6ylq":{"d":"2026-08-16","p":"W","q":4,"n":""}}},"7":{"uid":"7","e":{"e0gstx1b":{"d":"2026-07-23","p":"W","q":29,"n":""},"3yrgdxz8":{"d":"2026-07-30","p":"W","q":27,"n":""},"2w3z9jdl":{"d":"2026-08-06","p":"W","q":28,"n":""},"kzjcwwor":{"d":"2026-08-13","p":"W","q":3,"n":""},"vt302u1i":{"d":"2026-08-20","p":"W","q":5,"n":""},"sc89uip5":{"d":"2026-08-27","p":"W","q":4,"n":""}}},"8":{"uid":"8","e":{"10lq50dp":{"d":"2026-08-02","p":"W","q":75,"n":""},"g83j52vr":{"d":"2026-08-09","p":"W","q":64,"n":""},"rqwagcug":{"d":"2026-08-16","p":"W","q":59,"n":""},"g32ledp9":{"d":"2026-08-23","p":"W","q":4,"n":""},"uqxrj0iy":{"d":"2026-08-30","p":"W","q":6,"n":""},"8q8pgcid":{"d":"2026-09-06","p":"W","q":2,"n":""}}},"9":{"uid":"9","e":{"de1vkq9u":{"d":"2026-08-20","p":"W","q":264,"n":""},"n4dxvm5h":{"d":"2026-08-27","p":"W","q":116,"n":""}}},"12":{"uid":"12","e":{"fbwm1xxw":{"d":"2026-08-20","p":"W","q":30,"n":""},"zqm44gie":{"d":"2026-08-27","p":"W","q":16,"n":""},"gq196vio":{"d":"2026-09-03","p":"W","q":1,"n":""},"0ti91hom":{"d":"2026-09-10","p":"W","q":1,"n":""}}},"13":{"uid":"13","e":{"glzx446a":{"d":"2026-09-01","p":"W","q":342,"n":""},"6a26ihs4":{"d":"2026-09-08","p":"W","q":314,"n":""},"v249ag54":{"d":"2026-09-15","p":"W","q":100,"n":""},"8e5zueok":{"d":"2026-09-22","p":"W","q":30,"n":""},"b3f9s5qh":{"d":"2026-09-29","p":"W","q":32,"n":""},"o1uk7jn5":{"d":"2026-10-06","p":"W","q":2,"n":""}}},"15":{"uid":"15","e":{"yrq3p2wd":{"d":"2026-09-25","p":"W","q":20,"n":""},"mu69zsi2":{"d":"2026-10-02","p":"W","q":15,"n":""},"kv38u9w2":{"d":"2026-10-09","p":"W","q":4,"n":""},"vh1865g6":{"d":"2026-10-16","p":"W","q":3,"n":""},"5gexsgu7":{"d":"2026-10-17","p":"W","q":1,"n":""},"adb3takl":{"d":"2026-10-19","p":"D","q":1,"n":"Cuaca cerah, 2 regu"}}},"16":{"uid":"16","e":{"dghd0pdl":{"d":"2026-10-07","p":"W","q":378,"n":""},"bcpy3drq":{"d":"2026-10-14","p":"W","q":296,"n":""},"971qkaul":{"d":"2026-10-17","p":"W","q":139,"n":""}}},"22":{"uid":"22","e":{"s87n72db":{"d":"2026-09-23","p":"W","q":397,"n":""},"snl45fnx":{"d":"2026-09-30","p":"W","q":384,"n":""},"jn4ij5po":{"d":"2026-10-07","p":"W","q":464,"n":""},"3z62quon":{"d":"2026-10-14","p":"W","q":335,"n":""},"efux2wzn":{"d":"2026-10-17","p":"W","q":228,"n":""},"jnsoe7ps":{"d":"2026-10-19","p":"D","q":27,"n":"Cuaca cerah, 2 regu"},"pak125tc":{"d":"2026-10-20","p":"D","q":31,"n":""}}},"23":{"uid":"23","e":{"yxsi3lv2":{"d":"2026-10-05","p":"W","q":998,"n":""},"yih13uxu":{"d":"2026-10-12","p":"W","q":845,"n":""},"hmwb4vnt":{"d":"2026-10-17","p":"W","q":713,"n":""},"59zdmzsn":{"d":"2026-10-19","p":"D","q":53,"n":"Cuaca cerah, 2 regu"},"92yxczhv":{"d":"2026-10-20","p":"D","q":50,"n":""}}},"24":{"uid":"24","e":{"9d0jnljc":{"d":"2026-10-17","p":"W","q":466,"n":""},"dgz268pi":{"d":"2026-10-19","p":"D","q":27,"n":"Cuaca cerah, 2 regu"},"ah17l75s":{"d":"2026-10-20","p":"D","q":26,"n":""}}},"25":{"uid":"25","e":{"m9v5f2di":{"d":"2026-10-17","p":"W","q":31,"n":""},"s381qzey":{"d":"2026-10-19","p":"D","q":2,"n":"Cuaca cerah, 2 regu"},"ayhvv2f5":{"d":"2026-10-20","p":"D","q":2,"n":""}}},"29":{"uid":"29","e":{"m1aq7chm":{"d":"2026-10-07","p":"W","q":85,"n":""},"ygmo3b9r":{"d":"2026-10-14","p":"W","q":73,"n":""},"gfrjngis":{"d":"2026-10-17","p":"W","q":43,"n":""},"tmzm6n5r":{"d":"2026-10-19","p":"D","q":8,"n":"Cuaca cerah, 2 regu"},"mnct18cx":{"d":"2026-10-20","p":"D","q":8,"n":""}}},"30":{"uid":"30","e":{"4qesk4a3":{"d":"2026-10-13","p":"W","q":218,"n":""},"kw4176b7":{"d":"2026-10-17","p":"W","q":145,"n":""},"tyrzjyyc":{"d":"2026-10-19","p":"D","q":19,"n":"Cuaca cerah, 2 regu"},"o53arbhl":{"d":"2026-10-20","p":"D","q":20,"n":""}}}}};
+/* ===== APLIKASI ===== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const H = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const nf = (v, d = 0) => (v == null || isNaN(v) ? '–' : (+v).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const pc = (f, d = 1) => nf(f * 100, d) + '%';
+const now = new Date(); const TODAY = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY);
+const UNITS = ['m³', 'm²', 'm', 'm\'', 'kg', 'ton', 'titik', 'unit', 'bh', 'set', 'ls', '%'];
+const DOWS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const ICON = {
+  car: '<svg viewBox="0 0 12 12"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+  x: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+};
+const LS = { get(k) { try { return localStorage.getItem('kjp:' + k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('kjp:' + k, v); } catch (e) {} }, del(k) { try { localStorage.removeItem('kjp:' + k); } catch (e) {} } };
+
+const ST = { role: 'pending', me: null, team: {}, reqs: [], myReq: null, isAdmin: false, local: false, writeOK: null, proj: null, tasks: [], prog: {}, sched: null, view: 'gantt', zoom: 'week', sel: null, collapsed: new Set(), undo: [], mode: 'loading', canWrite: true, statusDn: TODAY, rev: null, pgGroup: null, pgDate: dnToIso(TODAY), pgPer: 'D', dlg: null };
+let db = null, dl = null, user = null;
+try { ST.zoom = LS.get('zoom') || 'week'; const c = JSON.parse(LS.get('collapsed') || '[]'); ST.collapsed = new Set(c); } catch (e) {}
+
+/* ---------- Penyimpanan ---------- */
+function cleanTasks() { return ST.tasks.map(t => ({ uid: t.uid, name: t.name, lvl: t.lvl, dur: t.dur, ms: !!t.ms, snet: t.snet || null, preds: (t.preds || []).map(l => ({ u: String(l.u), t: l.t, lag: +l.lag || 0 })), unit: t.unit || '', qty: +t.qty || 0, cost: +t.cost || 0, w: +t.w || 0, pct0: +t.pct0 || 0, pct0Dn: t.pct0Dn || null, bs: t.bs || null, bf: t.bf || null, bd: t.bd == null ? null : +t.bd })); }
+let saveTimer = null, saving = false, saveAgain = false;
+function setSave(state, text) { const el = $('#save'); el.className = 'save ' + state; $('span', el).textContent = text; }
+function queueSave() { if (!ST.canWrite) return; setSave('busy', 'Menyimpan…'); clearTimeout(saveTimer); saveTimer = setTimeout(persist, 900); }
+async function persist() {
+  if (saving) { saveAgain = true; return; } saving = true;
+  const str = JSON.stringify({ proj: ST.proj, tasks: cleanTasks() }); const rev = uid(); ST.rev = rev;
+  try {
+    if (!db) { LS.set('sched', str); setSave('local', 'Tersimpan di browser ini'); }
+    else {
+      const CH = 60000, n = Math.max(1, Math.ceil(str.length / CH));
+      for (let i = 0; i < n; i++) await db.doc('sched/c' + i).set({ s: str.slice(i * CH, (i + 1) * CH), rev });
+      const old = ST.chunks || 0; await db.doc('sched/meta').set({ n, rev, at: new Date().toISOString() });
+      for (let i = n; i < old; i++) await db.doc('sched/c' + i).delete(); ST.chunks = n;
+      setSave('', 'Tersimpan');
+    }
+  } catch (e) { handleDbErr(e); }
+  saving = false; if (saveAgain) { saveAgain = false; persist(); }
+}
+function handleDbErr(e) {
+  console.error(e); const c = e && e.code;
+  if (c === 'invalid_argument' && ST.role === 'pel') { setSave('err', 'Ditolak'); toast('Penyimpanan ditolak. Akun Anda perlu akses Contributor pada halaman ini. Hubungi admin.'); return; }
+  if (c === 'invalid_argument' && !ST.roChecked) { ST.canWrite = false; ST.roChecked = true; applyRO(); setSave('err', 'Hanya baca'); toast('Anda tidak punya akses menyimpan perubahan di halaman ini.'); return; }
+  if (c === 'quota_exceeded') { setSave('err', 'Kuota penuh'); toast('Penyimpanan penuh. Hapus sebagian entri progres lama lalu coba lagi.'); return; }
+  setSave('err', 'Gagal menyimpan'); toast('Gagal menyimpan (' + (c || 'jaringan') + '). Perubahan akan dicoba lagi saat Anda mengedit.');
+}
+async function writeProg(u, newEntries, removeId) {
+  const has = !!ST.prog[u]; const doc = ST.prog[u] ? { uid: u, e: { ...ST.prog[u].e } } : { uid: u, e: {} };
+  Object.assign(doc.e, newEntries || {}); if (removeId) delete doc.e[removeId]; ST.prog[u] = doc;
+  if (!db) { LS.set('prog', JSON.stringify(ST.prog)); return; }
+  const ref = db.doc('progress/' + u);
+  if (has && !removeId) await ref.update({ e: newEntries }); else await ref.set(doc);
+}
+async function clearAllProg() {
+  const uids = Object.keys(ST.prog); ST.prog = {};
+  if (!db) { LS.del('prog'); return; } for (const u of uids) { try { await db.doc('progress/' + u).delete(); } catch (e) {} }
+}
+
+/* ---------- Muat ---------- */
+function loadSchedule(obj, rev) {
+  ST.proj = Object.assign({ name: 'Proyek', start: null, mpd: 480, workdays: [false, true, true, true, true, true, false], weightMode: 'dur' }, obj.proj);
+  ST.tasks = (obj.tasks || []).map(t => ({ ...t })); ST.rev = rev || ST.rev; ST.mode = 'ready';
+  recalc(); render();
+}
+function recalc() { if (!ST.tasks.length) { ST.sched = null; return; } ST.sched = schedule(ST.proj, ST.tasks); ST.byUid = new Map(ST.tasks.map(t => [t.uid, t])); computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); }
+async function fetchSched(m, tries = 0) {
+  try {
+    const parts = await Promise.all(Array.from({ length: m.n }, (_, i) => db.doc('sched/c' + i).get()));
+    if (parts.some(p => !p.exists || p.data().rev !== m.rev)) throw new Error('mid-write');
+    const obj = JSON.parse(parts.map(p => p.data().s).join('')); ST.chunks = m.n;
+    if (ST.rev === m.rev) return; loadSchedule(obj, m.rev); setSave('', 'Tersimpan');
+  } catch (e) { if (tries < 4) setTimeout(() => fetchSched(m, tries + 1), 1200); }
+}
+async function init() {
+  render();
+  const cl = window.claude;
+  if (cl && cl.use) { [db, user, dl] = await Promise.all([cl.use('db').catch(() => null), cl.use('user').catch(() => null), cl.use('downloads').catch(() => null)]); }
+  if (!db) { ST.local = true; ST.isAdmin = true; }
+  else if (user) { try { const me = await user.me(); ST.me = me.id; ST.isAdmin = !!(me.canEdit || me.isOwner); ST.writeOK = await user.can('data.write'); } catch (e) {} }
+  updateRole();
+  if (db) {
+    db.doc('team/pelaksana').onSnapshot(snap => { ST.team = snap.exists ? JSON.parse(JSON.stringify(snap.data().list || {})) : {}; ST.teamLoaded = true; updateRole(); render(); }, e => { console.error(e); ST.teamLoaded = true; updateRole(); render(); });
+    if (ST.isAdmin) db.collection('requests').onSnapshot(snap => { ST.reqs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((x, y) => (x.at || '') < (y.at || '') ? -1 : 1); render(); }, e => console.error(e));
+    else if (ST.me) db.doc('requests/' + ST.me).onSnapshot(snap => { ST.myReq = snap.exists ? snap.data() : null; if (ST.role === 'guest' && !ST.regEdit) render(); }, () => {});
+    setSave('busy', 'Menyambung…');
+    db.collection('progress').onSnapshot(snap => { const p = {}; snap.docs.forEach(d => { const x = d.data(); p[d.id] = { uid: d.id, e: { ...(x.e || {}) } }; }); ST.prog = p; if (ST.sched) { computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); render(); } }, e => console.error(e));
+    db.doc('sched/meta').onSnapshot(snap => {
+      if (!snap.exists) { if (ST.mode === 'loading') { ST.mode = 'empty'; setSave('', 'Siap'); render(); } return; }
+      const m = snap.data(); if (m.rev === ST.rev) return; if (saving || saveTimer && ST.mode === 'ready' && $('#save').classList.contains('busy')) return;
+      fetchSched(m);
+    }, e => { console.error(e); setSave('err', 'Terputus'); });
+  } else {
+    setSave('local', 'Tersimpan di browser ini');
+    try { ST.team = JSON.parse(LS.get('team') || '{}'); } catch (e) { ST.team = {}; }
+    const s = LS.get('sched');
+    if (s) { try { ST.prog = JSON.parse(LS.get('prog') || '{}'); loadSchedule(JSON.parse(s)); return; } catch (e) {} }
+    ST.prog = JSON.parse(JSON.stringify(SAMPLE.prog)); loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks });
+  }
+}
+function applyRO() { const b = document.body; b.classList.toggle('ro', !ST.canWrite); ['admin', 'pel', 'guest', 'pending'].forEach(r => b.classList.toggle('role-' + r, ST.role === r)); }
+function updateRole() {
+  if (ST.isAdmin) ST.role = 'admin';
+  else if (db && !ST.teamLoaded) ST.role = 'pending';
+  else { const m = ST.me && ST.team[ST.me]; ST.role = m && m.active !== false ? 'pel' : 'guest'; }
+  ST.canWrite = ST.role === 'admin'; applyRO();
+  const v = viewsFor(); if (!v.includes(ST.view)) { ST.view = v[0]; ST.sel = null; }
+}
+const VIEW_LABEL = { gantt: 'Jadwal', prog: 'Pelaksana', dash: 'Dashboard', team: 'Tim' };
+function viewsFor() { return ST.role === 'admin' ? ['gantt', 'prog', 'dash', 'team'] : ST.role === 'pel' ? ['prog'] : ['reg']; }
+function renderAs() {
+  const el = $('#asWrap'); if (!el) return; el.hidden = !ST.local; if (!ST.local) return;
+  const ids = Object.keys(ST.team).filter(id => ST.team[id].active !== false);
+  const cur = ST.isAdmin ? 'admin' : (ST.me || 'admin');
+  el.innerHTML = `<label for="asSel" class="lbl" style="margin-right:6px">Lihat sebagai</label><select id="asSel" class="inp" style="width:auto;padding:5px 8px"><option value="admin">Admin</option>${ids.map(id => `<option value="${H(id)}" ${id === cur ? 'selected' : ''}>${H(ST.team[id].label)}</option>`).join('')}</select>`;
+  $('#asSel').onchange = e => { const v = e.target.value; ST.isAdmin = v === 'admin'; ST.me = v === 'admin' ? null : v; ST.pgGroup = null; updateRole(); render(); };
+}
+function renderTabs() {
+  const v = viewsFor(), nav = $('.tabs'); nav.hidden = v.length < 2;
+  nav.innerHTML = v.map(x => `<button role="tab" data-v="${x}" aria-selected="${x === ST.view}">${VIEW_LABEL[x] || ''}${x === 'team' && ST.reqs.length ? ` <span class="badge">${ST.reqs.length}</span>` : ''}</button>`).join('');
+}
+
+/* ---------- UI umum ---------- */
+function toast(msg) { let box = $('.toasts'); if (!box) { box = document.createElement('div'); box.className = 'toasts'; box.setAttribute('role', 'status'); document.body.appendChild(box); } const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; box.appendChild(t); while (box.children.length > 3) box.firstChild.remove(); setTimeout(() => t.remove(), 3800); }
+function modal(title, bodyHtml, buttons, onMount) {
+  closeModal(); const mb = document.createElement('div'); mb.className = 'mb';
+  mb.innerHTML = `<div class="md" role="dialog" aria-modal="true" aria-label="${H(title)}"><header><h3>${H(title)}</h3></header><div class="body">${bodyHtml}</div><footer>${buttons.map((b, i) => `<button class="btn ${b.cls || ''}" data-b="${i}">${H(b.label)}</button>`).join('')}</footer></div>`;
+  document.body.appendChild(mb); ST.dlg = mb;
+  mb.addEventListener('click', e => { if (e.target === mb) closeModal(); const b = e.target.closest('[data-b]'); if (b) { const fn = buttons[+b.dataset.b].fn; if (!fn || fn(mb) !== false) closeModal(); } });
+  if (onMount) onMount(mb); const f = $('input,select,button.pri', mb); f && f.focus();
+}
+function closeModal() { if (ST.dlg) { ST.dlg.remove(); ST.dlg = null; } }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (ST.dlg) closeModal(); else if (ST.sel && ST.view === 'gantt') { ST.sel = null; render(); } } });
+
+function render() {
+  $('#pname').textContent = ST.proj ? ST.proj.name : (ST.mode === 'loading' ? 'Memuat…' : 'Belum ada jadwal');
+  renderTabs(); renderAs();
+  const bn = $('#banner');
+  if (ST.role === 'pel' || ST.role === 'guest') { const m = myMember(); bn.hidden = ST.role !== 'pel'; bn.className = 'banner info'; bn.innerHTML = m ? `<b>${H(m.label)}</b><span class="long"> · Pelaksana${ST.proj && ST.proj.sample ? ' · proyek contoh' : ''}</span>` : ''; }
+  else if (ST.proj && ST.proj.sample) { bn.className = 'banner'; bn.hidden = false; bn.innerHTML = `<b>Data contoh.</b><span class="long"> Jadwal dan progres di bawah ini hanya ilustrasi.</span> <button class="btn edit-only" data-act="import">Impor XML MS Project Anda</button>`; }
+  else bn.hidden = true;
+  const main = $('#main');
+  if (ST.role === 'pending' || (ST.mode === 'loading' && ST.role !== 'guest')) { main.innerHTML = '<div class="load">Memuat jadwal…</div>'; return; }
+  if (ST.role === 'guest') { renderReg(); return; }
+  if (ST.view === 'team') { renderTeam(); return; }
+  if (!ST.tasks.length) { main.innerHTML = ST.role === 'admin' ? emptyHtml() : '<div class="load">Master schedule belum tersedia. Hubungi admin proyek.</div>'; return; }
+  if (ST.view === 'gantt') renderGantt(); else if (ST.view === 'prog') renderProg(); else renderDash();
+}
+function emptyHtml() {
+  return `<div class="view scroll"><div class="wrap"><div class="card" style="max-width:620px;margin:40px auto"><div class="empty">
+    <h3>Belum ada master schedule</h3><p>Ekspor jadwal dari MS Project dengan <b>File › Save As › XML Format (*.xml)</b>, lalu impor di sini. Aktivitas, WBS, durasi, dependency, dan baseline akan terbaca otomatis.</p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn pri edit-only" data-act="import">Impor XML</button><button class="btn edit-only" data-act="sample">Muat proyek contoh</button></div></div></div></div></div>`;
+}
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.tabs button'); if (tab) { ST.view = tab.dataset.v; ST.sel = null; render(); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return; const act = a.dataset.act;
+  if (act === 'import') openImport();
+  else if (act === 'sample') { const sp = JSON.parse(JSON.stringify(SAMPLE.prog)); ST.prog = {}; loadSchedule({ proj: { ...SAMPLE.proj, sample: true }, tasks: SAMPLE.tasks }); queueSave(); (async () => { for (const u of Object.keys(sp)) await writeProg(u, sp[u].e).catch(handleDbErr); recalc(); render(); })(); }
+});
+$('#bImport').onclick = () => openImport();
+$('#bExport').onclick = () => openExport();
+window.addEventListener('resize', () => {});
+
+/* ---------- Impor ---------- */
+function openImport() {
+  if (!isAdmin()) return;
+  const hasProg = Object.keys(ST.prog).length > 0; const sample = ST.proj && ST.proj.sample;
+  modal('Impor jadwal MS Project', `
+    <div class="drop" id="drop" tabindex="0"><b>Pilih file .xml</b><br><span style="font-size:12.5px">atau tarik file ke sini · format MSPDI dari MS Project (File › Save As › XML)</span></div>
+    <div id="impInfo" class="hint"></div>
+    ${ST.tasks.length && !sample ? `<div class="fld"><span class="lbl">Data yang sudah ada</span>
+      <label class="chk"><input type="radio" name="keep" value="keep" checked> Pertahankan progres, satuan &amp; volume untuk aktivitas dengan UID yang sama</label>
+      <label class="chk"><input type="radio" name="keep" value="clear"> Hapus semua data progres lama</label></div>` : ''}
+    ${hasProg && sample ? '<div class="hint">Progres contoh akan dihapus saat file Anda diimpor.</div>' : ''}`,
+    [{ label: 'Batal' }], mb => {
+      const d = $('#drop', mb); const pick = () => $('#fileIn').click();
+      d.onclick = pick; d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } };
+      d.ondragover = e => { e.preventDefault(); d.classList.add('on'); }; d.ondragleave = () => d.classList.remove('on');
+      d.ondrop = e => { e.preventDefault(); d.classList.remove('on'); const f = e.dataTransfer.files[0]; if (f) doImport(f); };
+    });
+}
+$('#fileIn').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) doImport(f); };
+async function doImport(file) {
+  const info = $('#impInfo'); const keepEl = $('input[name="keep"]:checked'); const keep = keepEl ? keepEl.value === 'keep' : !(ST.proj && ST.proj.sample);
+  try {
+    const text = await file.text(); const r = parseMSPDI(text);
+    const old = new Map(ST.tasks.map(t => [t.uid, t]));
+    if (keep) r.tasks.forEach(t => { const o = old.get(t.uid); if (o) { if (!t.unit && o.unit) t.unit = o.unit; if (!t.qty && o.qty) t.qty = o.qty; if (o.w) t.w = o.w; } });
+    r.tasks.forEach(t => { delete t._start; delete t._finish; });
+    // Tanpa baseline di file -> jadikan jadwal saat ini sebagai baseline awal
+    const noBase = !r.tasks.some(t => t.bs);
+    closeModal(); if (!keep || (ST.proj && ST.proj.sample)) await clearAllProg();
+    ST.undo = []; ST.collapsed = new Set(); ST.sel = null;
+    loadSchedule({ proj: r.proj, tasks: r.tasks });
+    if (noBase) { setBaseline(false); toast(`${r.tasks.length} aktivitas diimpor. File tidak berisi baseline, jadwal ini ditetapkan sebagai baseline.`); }
+    else toast(`${r.tasks.length} aktivitas diimpor dari ${file.name}.`);
+    if (ST.sched.cycle) toast('Perhatian: ada dependency melingkar. Periksa kolom Predecessor.');
+    queueSave(); render();
+  } catch (e) { console.error(e); if (info) { info.className = 'err'; info.textContent = e.message || 'File tidak dapat dibaca.'; } else toast(e.message); }
+}
+
+/* ---------- Ekspor ---------- */
+function openExport() {
+  if (!ST.tasks.length || !isAdmin()) return;
+  modal('Ekspor', `<p style="margin:0">Pilih file yang ingin disimpan.</p>
+    <div class="fld"><label class="chk"><input type="radio" name="ex" value="xml" checked> Jadwal MS Project (.xml) – aktivitas, dependency, baseline, % selesai per ${fmtDn(ST.statusDn)}</label>
+    <label class="chk"><input type="radio" name="ex" value="csv"> Rekap progres harian/mingguan (.csv)</label>
+    <label class="chk"><input type="radio" name="ex" value="wbs"> Tabel kemajuan per aktivitas (.csv)</label></div>
+    ${dl ? '' : '<div class="hint">Unduhan tidak tersedia di tampilan ini. Isi file akan ditampilkan agar bisa disalin.</div>'}`,
+    [{ label: 'Batal' }, { label: 'Simpan file', cls: 'pri', fn: mb => { doExport($('input[name="ex"]:checked', mb).value); } }]);
+}
+function csvCell(v) { const s = String(v == null ? '' : v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+async function doExport(kind) {
+  let name, data; const safe = ST.proj.name.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'proyek';
+  if (kind === 'xml') { name = safe + '.xml'; data = exportMSPDI(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); }
+  else if (kind === 'csv') {
+    const rows = [['Tanggal', 'Periode', 'WBS', 'Aktivitas', 'Volume', 'Satuan', 'Catatan']];
+    ST.tasks.filter(t => !t.sum).forEach(t => entriesOf(ST.prog, t.uid).forEach(e => rows.push([e.d, e.p === 'W' ? 'Mingguan' : 'Harian', t.wbs, t.name, e.q, t.unit, e.n || ''])));
+    rows.sort((a, b) => a[0] < b[0] ? -1 : 1); name = safe + '_progres.csv'; data = '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\n');
+  } else {
+    computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
+    const rows = [['WBS', 'Aktivitas', 'Durasi (hari)', 'Mulai', 'Selesai', 'Baseline mulai', 'Baseline selesai', 'Bobot %', 'Volume target', 'Satuan', 'Volume realisasi', 'Rencana %', 'Realisasi %', 'Deviasi %', 'Kritis']];
+    ST.tasks.forEach(t => rows.push([t.wbs, t.name, t.calDur, dnToIso(t.startDn), dnToIso(t.finishDn), t.bs || '', t.bf || '', (t.bobot || 0).toFixed(3).replace('.', ','), t.sum ? '' : t.qty, t.sum ? '' : t.unit, t.sum ? '' : actualQty(ST.prog, t.uid, ST.statusDn), (t.plan * 100).toFixed(2).replace('.', ','), (t.act * 100).toFixed(2).replace('.', ','), ((t.act - t.plan) * 100).toFixed(2).replace('.', ','), t.crit ? 'Ya' : '']));
+    name = safe + '_kemajuan_' + dnToIso(ST.statusDn) + '.csv'; data = '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\n');
+  }
+  if (dl) { try { await dl.save({ filename: name, data }); toast('File disimpan: ' + name); return; } catch (e) { if (e && e.code === 'declined') return; console.error(e); } }
+  if (!window.claude) { try { const url = URL.createObjectURL(new Blob([data], { type: name.endsWith('.xml') ? 'application/xml' : 'text/csv' })); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast('File diunduh: ' + name); return; } catch (e) { console.error(e); } }
+  setTimeout(() => modal(name, `<textarea class="inp" style="height:280px;font-family:var(--f-mono);font-size:11px" readonly>${H(data)}</textarea>`, [{ label: 'Salin', cls: 'pri', fn: mb => { const ta = $('textarea', mb); navigator.clipboard.writeText(ta.value).then(() => toast('Disalin.'), () => { ta.select(); toast('Tekan Ctrl+C untuk menyalin.'); }); return false; } }, { label: 'Tutup' }]), 50);
+}
+
+/* ---------- Edit jadwal ---------- */
+function pushUndo() { ST.undo.push(JSON.stringify({ proj: ST.proj, tasks: cleanTasks() })); if (ST.undo.length > 40) ST.undo.shift(); }
+function commit() { if (ST.proj.sample) { /* tetap contoh */ } recalc(); queueSave(); render(); }
+function undo() { const s = ST.undo.pop(); if (!s) return; const o = JSON.parse(s); ST.proj = o.proj; ST.tasks = o.tasks; commit(); toast('Perubahan terakhir dibatalkan.'); }
+function setBaseline(onlySel) {
+  const list = onlySel && ST.sel ? [ST.byUid.get(ST.sel)] : ST.tasks;
+  list.forEach(t => { if (!t) return; t.bs = dnToIso(t.startDn); t.bf = dnToIso(t.finishDn); t.bd = t.sum ? null : (t.ms ? 0 : t.dur); });
+  if (!onlySel) list.forEach(t => { t.pct0Dn = t.pct0Dn || TODAY; });
+}
+function selIndex() { return ST.tasks.findIndex(t => t.uid === ST.sel); }
+function newUid() { let m = 0; ST.tasks.forEach(t => { const n = parseInt(t.uid, 10); if (!isNaN(n) && n > m) m = n; }); return String(m + 1); }
+function addTask(asChild) {
+  pushUndo(); const i = selIndex(); const ref = ST.tasks[i];
+  let at = ST.tasks.length, lvl = 1;
+  if (ref) { if (asChild) { at = i + 1; lvl = ref.lvl + 1; } else { let j = i + 1; while (j < ST.tasks.length && ST.tasks[j].lvl > ref.lvl) j++; at = j; lvl = ref.lvl; } }
+  const t = { uid: newUid(), name: 'Aktivitas baru', lvl, dur: 5, ms: false, snet: ref ? dnToIso(ref.startDn) : ST.proj.start, preds: [], unit: '', qty: 0, cost: 0, w: 0, pct0: 0, bs: null, bf: null, bd: null };
+  ST.tasks.splice(at, 0, t); ST.sel = t.uid; commit(); setTimeout(() => { const n = $('#fName'); n && (n.focus(), n.select()); }, 30);
+}
+function delTask() {
+  const i = selIndex(); if (i < 0) return; const t = ST.tasks[i]; let j = i + 1; while (j < ST.tasks.length && ST.tasks[j].lvl > t.lvl) j++;
+  const n = j - i; const hasProg = ST.tasks.slice(i, j).some(x => ST.prog[x.uid] && Object.keys(ST.prog[x.uid].e).length);
+  modal('Hapus aktivitas?', `<p style="margin:0"><b>${H(t.name)}</b>${n > 1 ? ` beserta ${n - 1} sub-aktivitas` : ''} akan dihapus dari jadwal. Dependency yang menunjuk ke aktivitas ini ikut dihapus.${hasProg ? ' Riwayat progresnya tetap tersimpan dan muncul lagi jika UID yang sama diimpor ulang.' : ''}</p>`,
+    [{ label: 'Batal' }, { label: 'Hapus', cls: 'pri', fn: () => { pushUndo(); const gone = new Set(ST.tasks.slice(i, j).map(x => x.uid)); ST.tasks.splice(i, n); ST.tasks.forEach(x => x.preds = (x.preds || []).filter(l => !gone.has(String(l.u)))); ST.sel = null; commit(); } }]);
+}
+function indent(d) {
+  const i = selIndex(); if (i < 0) return; const t = ST.tasks[i];
+  if (d > 0 && (i === 0 || ST.tasks[i - 1].lvl < t.lvl)) return; if (d < 0 && t.lvl <= 1) return;
+  pushUndo(); let j = i + 1; while (j < ST.tasks.length && ST.tasks[j].lvl > t.lvl) j++; for (let k = i; k < j; k++) ST.tasks[k].lvl += d;
+  if (d > 0) { const p = ST.tasks[i - 1]; /* induk baru jadi summary: lepas volume */ }
+  commit();
+}
+function moveTask(d) {
+  const i = selIndex(); if (i < 0) return; const t = ST.tasks[i]; let j = i + 1; while (j < ST.tasks.length && ST.tasks[j].lvl > t.lvl) j++;
+  const block = ST.tasks.slice(i, j);
+  if (d < 0) { let k = i - 1; while (k >= 0 && ST.tasks[k].lvl > t.lvl) k--; if (k < 0 || ST.tasks[k].lvl < t.lvl) return; pushUndo(); ST.tasks.splice(i, block.length); ST.tasks.splice(k, 0, ...block); }
+  else { if (j >= ST.tasks.length || ST.tasks[j].lvl < t.lvl) return; let k = j + 1; while (k < ST.tasks.length && ST.tasks[k].lvl > t.lvl) k++; pushUndo(); const after = ST.tasks.slice(j, k); ST.tasks.splice(i, block.length + after.length, ...after, ...block); }
+  commit();
+}
+
+/* ---------- Gantt ---------- */
+const PXD = { day: 28, week: 11, month: 3.6 };
+function visibleTasks() { const out = []; let hide = Infinity; for (const t of ST.tasks) { if (t.lvl > hide) continue; hide = Infinity; out.push(t); if (t.sum && ST.collapsed.has(t.uid)) hide = t.lvl; } return out; }
+function ganttRange() {
+  let a = Infinity, b = -Infinity; ST.tasks.forEach(t => { a = Math.min(a, t.startDn, t.bsDn ?? Infinity); b = Math.max(b, t.finishDn, t.bfDn ?? -Infinity); });
+  a = Math.min(a, ST.statusDn); b = Math.max(b, ST.statusDn);
+  if (ST.zoom === 'month') { const d = new Date(a * DAY); a = Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / DAY); b += 40; }
+  else { a -= ((dnDow(a) + 6) % 7) + 7; b += 21; }
+  return { a, b };
+}
+const COLS = '34px 52px minmax(130px,1fr) 58px 84px 84px 78px 46px';
+function renderGantt() {
+  const main = $('#main'); const keep = $('.gr', main); const sx = keep ? keep.scrollLeft : null, sy = keep ? keep.scrollTop : 0;
+  const lw = LS.get('lw') || '640px';
+  main.innerHTML = `<div class="view">
+    <div class="tb">
+      <button class="btn edit-only" data-g="add" title="Tambah aktivitas di bawah yang dipilih">+ Aktivitas</button>
+      <button class="btn ghost edit-only" data-g="child" ${ST.sel ? '' : 'disabled'} title="Tambah sub-aktivitas">+ Sub</button>
+      <button class="btn ghost edit-only" data-g="out" ${ST.sel ? '' : 'disabled'} title="Naikkan level (outdent)">⇤</button>
+      <button class="btn ghost edit-only" data-g="in" ${ST.sel ? '' : 'disabled'} title="Turunkan level (indent)">⇥</button>
+      <button class="btn ghost edit-only" data-g="up" ${ST.sel ? '' : 'disabled'} title="Pindah ke atas">↑</button>
+      <button class="btn ghost edit-only" data-g="down" ${ST.sel ? '' : 'disabled'} title="Pindah ke bawah">↓</button>
+      <span class="sep edit-only"></span>
+      <div class="seg" role="group" aria-label="Skala waktu">${['day', 'week', 'month'].map(z => `<button data-z="${z}" aria-pressed="${ST.zoom === z}">${{ day: 'Hari', week: 'Minggu', month: 'Bulan' }[z]}</button>`).join('')}</div>
+      <button class="btn ghost" data-g="today">Hari ini</button>
+      <button class="btn ghost" data-g="fold">${ST.collapsed.size ? 'Buka semua' : 'Ringkas'}</button>
+      <span class="sep edit-only"></span>
+      <button class="btn edit-only" data-g="base" title="Simpan jadwal saat ini sebagai baseline">Tetapkan baseline</button>
+      <button class="btn ghost edit-only" data-g="undo" ${ST.undo.length ? '' : 'disabled'}>Urungkan</button>
+      <button class="btn ghost" data-g="set" title="Kalender & bobot">Pengaturan</button>
+      <div class="legend"><span><i style="background:var(--bar)"></i>Aktivitas</span><span><i style="background:var(--crit)"></i>Jalur kritis</span><span><i style="background:var(--base);height:4px"></i>Baseline</span><span><i style="background:var(--today);width:2px;height:12px"></i>Tgl status</span></div>
+    </div>
+    <div class="gantt" id="gantt" style="--lw:${H(lw)}">
+      <div class="gl"><div class="gh"><div class="r head" style="--cols:${COLS}"><div class="c-n">#</div><div class="c-w">WBS</div><div class="c-name">Nama aktivitas</div><div class="c-d">Durasi</div><div class="c-s">Mulai</div><div class="c-f">Selesai</div><div class="c-p">Pred.</div><div class="c-pc">%</div></div></div><div class="glb" id="glb"></div></div>
+      <div class="split" id="split" title="Seret untuk mengubah lebar"></div>
+      <div class="gr" id="gr"><div class="gh" id="ghead"></div><div id="gbody"></div></div>
+    </div>
+    ${ST.sel ? drawerHtml() : ''}
+  </div>`;
+  drawGantt();
+  const gr = $('#gr'), glb = $('#glb');
+  if (sx != null) { gr.scrollLeft = sx; gr.scrollTop = sy; } else scrollToDn(ST.statusDn - 14);
+  glb.scrollTop = gr.scrollTop;
+  let lock = 0; gr.addEventListener('scroll', () => { if (lock === 2) { lock = 0; return; } lock = 1; glb.scrollTop = gr.scrollTop; });
+  glb.addEventListener('scroll', () => { if (lock === 1) { lock = 0; return; } lock = 2; gr.scrollTop = glb.scrollTop; });
+  wireGantt();
+  if (ST.sel) wireDrawer();
+}
+function scrollToDn(dn) { const gr = $('#gr'); if (!gr || !ST.grange) return; gr.scrollLeft = Math.max(0, (dn - ST.grange.a) * PXD[ST.zoom]); }
+function drawGantt() {
+  const vis = visibleTasks(); ST.vis = vis; const R = ST.grange = ganttRange(); const px = PXD[ST.zoom]; const cal = ST.sched.cal;
+  const W = Math.ceil((R.b - R.a + 1) * px), RH = 30, Ht = vis.length * RH; const X = dn => (dn - R.a) * px;
+  // Panel kiri
+  $('#glb').innerHTML = vis.map(t => {
+    const pct = Math.round(t.act * 100);
+    return `<div class="r ${t.sum ? 'sum' : ''} ${t.uid === ST.sel ? 'sel' : ''} ${t.crit && !t.sum ? 'crit' : ''}" data-uid="${H(t.uid)}" style="--cols:${COLS}">
+      <div class="c-n">${t.id}</div><div class="c-w">${t.wbs}</div>
+      <div class="c-name" style="padding-left:${(t.lvl - 1) * 14 + 4}px">${t.sum ? `<button class="car ${ST.collapsed.has(t.uid) ? 'closed' : ''}" data-tog="${H(t.uid)}" aria-label="Buka/tutup">${ICON.car}</button>` : '<span style="width:16px;flex:none"></span>'}<span style="overflow:hidden;text-overflow:ellipsis">${t.ms ? '◆ ' : ''}${H(t.name)}</span></div>
+      <div class="c-d">${t.ms ? '0' : nf(t.calDur, t.calDur % 1 ? 1 : 0)} h</div><div class="c-s">${fmtDn(t.startDn)}</div><div class="c-f">${fmtDn(t.finishDn)}</div>
+      <div class="c-p" title="${H(predsToText(t, ST.byUid))}">${H(predsToText(t, ST.byUid))}</div><div class="c-pc">${pct}%</div></div>`;
+  }).join('') + `<div style="height:40px"></div>`;
+  // Header skala
+  let top = '', bot = '';
+  const mStart = dn => { const d = new Date(dn * DAY); return d.getUTCDate() === 1; };
+  for (let d = R.a; d <= R.b; d++) {
+    const dt = new Date(d * DAY);
+    if (ST.zoom === 'month') { if (mStart(d) || d === R.a) { const yr = dt.getUTCMonth() === 0 || d === R.a; bot += `<line x1="${X(d)}" y1="24" x2="${X(d)}" y2="48" stroke="var(--line)"/><text x="${X(d) + 4}" y="40" font-size="10.5" fill="var(--muted)">${MONTHS[dt.getUTCMonth()]}</text>`; if (yr) top += `<line x1="${X(d)}" y1="0" x2="${X(d)}" y2="24" stroke="var(--line)"/><text x="${X(d) + 4}" y="16" font-size="11" font-weight="600" fill="var(--ink)">${dt.getUTCFullYear()}</text>`; } }
+    else {
+      if (mStart(d) || d === R.a) top += `<line x1="${X(d)}" y1="0" x2="${X(d)}" y2="24" stroke="var(--line)"/><text x="${X(d) + 5}" y="16" font-size="11" font-weight="600" fill="var(--ink)">${MONTHS[dt.getUTCMonth()]} ${dt.getUTCFullYear()}</text>`;
+      if (ST.zoom === 'day') bot += `<text x="${X(d) + px / 2}" y="34" font-size="10" text-anchor="middle" fill="${cal.isWork(d) ? 'var(--muted)' : 'var(--faint)'}">${dt.getUTCDate()}</text><text x="${X(d) + px / 2}" y="44" font-size="8.5" text-anchor="middle" fill="var(--faint)">${DOWS[dt.getUTCDay()][0]}</text>`;
+      else if (dt.getUTCDay() === 1) bot += `<line x1="${X(d)}" y1="26" x2="${X(d)}" y2="48" stroke="var(--line)"/><text x="${X(d) + 3}" y="40" font-size="10" fill="var(--muted)">${dt.getUTCDate()}</text>`;
+    }
+  }
+  $('#ghead').innerHTML = `<svg width="${W}" height="48" style="background:var(--panel)"><line x1="0" y1="24" x2="${W}" y2="24" stroke="var(--line2)"/>${top}${bot}<line x1="0" y1="47.5" x2="${W}" y2="47.5" stroke="var(--line)"/></svg>`;
+  // Badan
+  let bg = '', grid = '', bars = '', links = '';
+  if (px >= 6) for (let d = R.a; d <= R.b; d++) if (!cal.isWork(d)) bg += `<rect x="${X(d)}" y="0" width="${px}" height="${Ht}" fill="var(--nonwork)"/>`;
+  for (let d = R.a; d <= R.b; d++) { const dt = new Date(d * DAY); if ((ST.zoom === 'week' && dt.getUTCDay() === 1) || (ST.zoom === 'month' && dt.getUTCDate() === 1) || (ST.zoom === 'day' && dt.getUTCDay() === 1)) grid += `<line x1="${X(d)}" y1="0" x2="${X(d)}" y2="${Ht}" stroke="var(--line2)"/>`; }
+  vis.forEach((t, i) => { grid += `<line x1="0" y1="${(i + 1) * RH - .5}" x2="${W}" y2="${(i + 1) * RH - .5}" stroke="var(--line2)"/>`; if (t.uid === ST.sel) bg += `<rect x="0" y="${i * RH}" width="${W}" height="${RH}" fill="var(--accent-soft)"/>`; });
+  const row = new Map(vis.map((t, i) => [t.uid, i]));
+  vis.forEach((t, i) => {
+    const y = i * RH; const x1 = X(t.startDn), x2 = X(t.finishDn + 1);
+    if (t.bsDn != null && t.bfDn != null) { if (t.bd === 0 || (t.ms && !t.sum)) { const bx = X(t.bfDn + 1); bars += `<path d="M${bx} ${y + 20} l4 4 -4 4 -4 -4z" fill="var(--base)"/>`; } else bars += `<rect x="${X(t.bsDn)}" y="${y + 21}" width="${Math.max(2, X(t.bfDn + 1) - X(t.bsDn))}" height="4" rx="1" fill="var(--base)"/>`; }
+    const col = t.crit ? 'var(--crit)' : 'var(--bar)', pcol = t.crit ? 'var(--crit-prog)' : 'var(--bar-prog)';
+    if (t.sum) {
+      bars += `<g class="sumb" data-uid="${H(t.uid)}"><rect x="${x1}" y="${y + 8}" width="${Math.max(2, x2 - x1)}" height="6" fill="var(--sum)"/><path d="M${x1} ${y + 8}h6l-6 8z M${x2} ${y + 8}h-6l6 8z" fill="var(--sum)"/>` +
+        `<rect x="${x1}" y="${y + 9.5}" width="${Math.max(0, (x2 - x1) * t.act)}" height="3" fill="var(--today)"/></g>`;
+    } else if (t.ms) {
+      const mx = X(t.startDn + 1); bars += `<g class="bar" data-uid="${H(t.uid)}" data-ms="1"><path d="M${mx} ${y + 6} l7 7 -7 7 -7 -7z" fill="${t.act >= 1 ? pcol : col}"/></g><text x="${mx + 11}" y="${y + 17}" font-size="11" fill="var(--ink)">${H(t.name)} · ${fmtDn(t.startDn)}</text>`;
+    } else {
+      const w = Math.max(3, x2 - x1);
+      bars += `<g class="bar" data-uid="${H(t.uid)}"><rect x="${x1}" y="${y + 7}" width="${w}" height="12" rx="2" fill="${col}"/><rect x="${x1}" y="${y + 7}" width="${w * t.act}" height="12" rx="2" fill="${pcol}"/><rect class="hnd" x="${x1 + w - 5}" y="${y + 6}" width="7" height="14" fill="transparent" style="cursor:ew-resize"/></g>` +
+        (ST.zoom !== 'month' || w > 20 ? `<text x="${x2 + 6}" y="${y + 17}" font-size="10.5" fill="var(--muted)" pointer-events="none">${Math.round(t.act * 100)}%${t.qty ? ' · ' + nf(actualQty(ST.prog, t.uid, ST.statusDn), 0) + '/' + nf(t.qty, 0) + ' ' + H(t.unit) : ''}</text>` : '');
+    }
+  });
+  // Dependency
+  const vrow = t => { for (let a = t; a; a = a.parent) if (row.has(a.uid)) return a; return null; };
+  ST.sched.links.forEach(L => {
+    const p = vrow(L.p), s = vrow(L.s); if (!p || !s || p === s) return;
+    const yp = row.get(p.uid) * RH + 13, ys = row.get(s.uid) * RH + 13;
+    const pS = X(p.startDn) + (p.ms ? px : 0), pE = p.ms ? X(p.startDn + 1) : X(p.finishDn + 1), sS = s.ms ? X(s.startDn + 1) - 7 : X(s.startDn), sE = s.ms ? X(s.startDn + 1) + 7 : X(s.finishDn + 1);
+    const fromEnd = L.t === 'FS' || L.t === 'FF', toStart = L.t === 'FS' || L.t === 'SS';
+    const xa = fromEnd ? pE : pS, xb = toStart ? sS : sE; const dir = fromEnd ? 1 : -1; const xo = xa + dir * 6;
+    const crit = L.p.crit && L.s.crit && L.t === 'FS'; const c = crit ? 'var(--crit)' : 'var(--faint)';
+    let d;
+    if (toStart && xb - 6 >= xo && fromEnd) d = `M${xa} ${yp} H${Math.max(xo, xb - 8)} V${ys} H${xb}`;
+    else { const yMid = ys > yp ? row.get(s.uid) * RH + 1 : row.get(s.uid) * RH + RH - 1; const xe = toStart ? xb - 8 : xb + 8; d = `M${xa} ${yp} H${xo} V${yMid} H${xe} V${ys} H${xb}`; }
+    links += `<path d="${d}" fill="none" stroke="${c}" stroke-width="1.1" marker-end="url(#${crit ? 'ac' : 'an'})"/>`;
+  });
+  const sd = X(ST.statusDn + 1);
+  $('#gbody').innerHTML = `<svg id="gsvg" width="${W}" height="${Ht + 40}"><defs>
+    <marker id="an" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L6 3L0 6z" fill="var(--faint)"/></marker>
+    <marker id="ac" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L6 3L0 6z" fill="var(--crit)"/></marker></defs>
+    ${bg}${grid}${links}${bars}<line x1="${sd}" y1="0" x2="${sd}" y2="${Ht + 40}" stroke="var(--today)" stroke-width="1.5" stroke-dasharray="4 3"/></svg>`;
+}
+function wireGantt() {
+  const tb = $('.tb');
+  tb.onclick = e => {
+    const z = e.target.closest('[data-z]'); if (z) { ST.zoom = z.dataset.z; LS.set('zoom', ST.zoom); const gr = $('#gr'); const mid = gr ? ST.grange.a + (gr.scrollLeft + gr.clientWidth / 2) / PXD[$('[data-z][aria-pressed="true"]').dataset.z] : ST.statusDn; renderGantt(); scrollToDn(mid - $('#gr').clientWidth / 2 / PXD[ST.zoom]); return; }
+    const b = e.target.closest('[data-g]'); if (!b) return; const g = b.dataset.g;
+    if (g === 'add') addTask(false); else if (g === 'child') addTask(true); else if (g === 'in') indent(1); else if (g === 'out') indent(-1); else if (g === 'up') moveTask(-1); else if (g === 'down') moveTask(1);
+    else if (g === 'today') scrollToDn(ST.statusDn - 14);
+    else if (g === 'fold') { if (ST.collapsed.size) ST.collapsed.clear(); else ST.tasks.forEach(t => { if (t.sum && t.lvl >= 2) ST.collapsed.add(t.uid); }); LS.set('collapsed', JSON.stringify([...ST.collapsed])); renderGantt(); }
+    else if (g === 'base') modal('Tetapkan baseline?', `<p style="margin:0">Tanggal mulai, selesai, dan durasi semua aktivitas saat ini akan disimpan sebagai <b>baseline</b> (rencana acuan). Baseline lama akan ditimpa, dan kurva S rencana di dashboard akan berubah mengikuti baseline baru.</p>`, [{ label: 'Batal' }, { label: 'Tetapkan baseline', cls: 'pri', fn: () => { pushUndo(); setBaseline(false); commit(); toast('Baseline diperbarui.'); } }]);
+    else if (g === 'undo') undo(); else if (g === 'set') openSettings();
+  };
+  $('#glb').onclick = e => {
+    const tg = e.target.closest('[data-tog]'); if (tg) { const u = tg.dataset.tog; ST.collapsed.has(u) ? ST.collapsed.delete(u) : ST.collapsed.add(u); LS.set('collapsed', JSON.stringify([...ST.collapsed])); renderGantt(); return; }
+    const r = e.target.closest('.r[data-uid]'); if (r) { ST.sel = r.dataset.uid === ST.sel ? null : r.dataset.uid; renderGantt(); }
+  };
+  // Splitter
+  const sp = $('#split'); sp.onpointerdown = e => { const g = $('#gantt'); const x0 = e.clientX, w0 = $('.gl').getBoundingClientRect().width; sp.setPointerCapture(e.pointerId);
+    sp.onpointermove = ev => { const w = Math.max(160, Math.min(window.innerWidth - 160, w0 + ev.clientX - x0)); g.style.setProperty('--lw', w + 'px'); g.style.setProperty('--lws', w + 'px'); };
+    sp.onpointerup = () => { sp.onpointermove = null; LS.set('lw', g.style.getPropertyValue('--lw')); }; };
+  // Seret batang
+  const svg = $('#gsvg'); let drag = null;
+  svg.onpointerdown = e => {
+    const g = e.target.closest('.bar, .sumb'); if (!g) { return; }
+    const t = ST.byUid.get(g.dataset.uid); if (!t) return;
+    drag = { g, t, x0: e.clientX, mode: e.target.classList.contains('hnd') ? 'size' : 'move', moved: false, sum: g.classList.contains('sumb') };
+    if (!ST.canWrite || drag.sum) drag.mode = 'none'; svg.setPointerCapture(e.pointerId);
+  };
+  svg.onpointermove = e => {
+    if (!drag) return; const dx = e.clientX - drag.x0; if (Math.abs(dx) > 3) drag.moved = true; if (!drag.moved || drag.mode === 'none') return;
+    drag.g.classList.add('drag'); const px = PXD[ST.zoom]; const dd = Math.round(dx / px) * px;
+    if (drag.mode === 'move') drag.g.setAttribute('transform', `translate(${dd} 0)`);
+    else { const rs = drag.g.querySelectorAll('rect'); const w0 = +rs[0].dataset.w0 || +rs[0].getAttribute('width'); rs[0].dataset.w0 = w0; rs[0].setAttribute('width', Math.max(px, w0 + dd)); }
+  };
+  svg.onpointerup = e => {
+    if (!drag) return; const d = drag; drag = null; const px = PXD[ST.zoom]; const days = Math.round((e.clientX - d.x0) / px);
+    if (!d.moved) { ST.sel = d.t.uid === ST.sel ? null : d.t.uid; renderGantt(); return; }
+    if (d.mode === 'none' || !days) { renderGantt(); return; }
+    pushUndo(); const cal = ST.sched.cal; const t = d.t;
+    if (d.mode === 'move') { let ns = t.startDn + days; while (!cal.isWork(ns)) ns += days > 0 ? 1 : -1; t.snet = dnToIso(ns); toast(`${t.name}: mulai paling awal ${fmtDn(ns)}${t.preds && t.preds.length ? ' (tetap mengikuti dependency)' : ''}`); }
+    else { const nf_ = t.finishDn + days; t.dur = Math.max(1, cal.idx(nf_ + 1) - cal.idx(t.startDn)); toast(`${t.name}: durasi ${t.dur} hari`); }
+    ST.sel = t.uid; commit();
+  };
+}
+
+/* ---------- Laci edit aktivitas ---------- */
+function drawerHtml() {
+  const t = ST.byUid.get(ST.sel); if (!t) { ST.sel = null; return ''; }
+  const ro = !ST.canWrite ? 'disabled' : ''; const ent = entriesOf(ST.prog, t.uid);
+  return `<aside class="drawer" aria-label="Detail aktivitas">
+    <header><span class="chip">${t.wbs}</span><h3>${H(t.name)}</h3><button class="btn ghost" data-dc="close" aria-label="Tutup">${ICON.x}</button></header>
+    <div class="body">
+      <div class="fld"><label for="fName">Nama aktivitas</label><input id="fName" value="${H(t.name)}" ${ro}></div>
+      ${t.sum ? `<div class="boxed"><dl class="kv"><dt>Jenis</dt><dd>Ringkasan (summary)</dd><dt>Durasi</dt><dd>${nf(t.calDur, 1)} hari kerja</dd><dt>Mulai</dt><dd>${fmtDn(t.startDn)}</dd><dt>Selesai</dt><dd>${fmtDn(t.finishDn)}</dd><dt>Bobot</dt><dd>${nf(t.bobot, 2)}%</dd><dt>Rencana / Realisasi</dt><dd>${pc(t.plan)} / ${pc(t.act)}</dd></dl></div>
+        <div class="fld"><label for="fPred">Predecessor ringkasan</label><input id="fPred" value="${H(predsToText(t, ST.byUid))}" ${ro} placeholder="mis. 4FS+2"><span class="hint">Berlaku untuk semua sub-aktivitas.</span></div>` : `
+      <div class="grid2">
+        <div class="fld"><label for="fDur">Durasi (hari kerja)</label><input id="fDur" type="number" min="0" step="0.5" value="${t.ms ? 0 : t.dur}" ${ro}></div>
+        <div class="fld"><label for="fSnet">Mulai paling awal</label><input id="fSnet" type="date" value="${t.snet || ''}" ${ro}></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="fMs" ${t.ms ? 'checked' : ''} ${ro}> Milestone (durasi 0)</label>
+      <div class="fld"><label for="fPred">Predecessor</label><input id="fPred" value="${H(predsToText(t, ST.byUid))}" ${ro} placeholder="mis. 3, 5SS+2, 7FF"><span class="hint">Nomor baris + jenis (FS, SS, FF, SF) + jeda hari. Tanpa jenis = FS.</span><span class="err" id="predErr"></span></div>
+      <div class="boxed"><dl class="kv"><dt>Mulai / Selesai</dt><dd>${fmtDn(t.startDn)} – ${fmtDn(t.finishDn)}</dd><dt>Total float</dt><dd>${nf(t.float, 1)} hari ${t.crit ? '<span class="chip crit">Kritis</span>' : ''}</dd>
+        <dt>Baseline</dt><dd>${t.bs ? fmtDn(t.bsDn) + ' – ' + fmtDn(t.bfDn) : 'belum ada'}</dd><dt>Varians selesai</dt><dd>${t.bfDn != null ? (t.finishDn - t.bfDn > 0 ? '+' : '') + (t.finishDn - t.bfDn) + ' hari' : '–'}</dd></dl></div>
+      <div class="lbl" style="margin-top:4px">Kuantitas &amp; bobot</div>
+      <div class="grid2">
+        <div class="fld"><label for="fQty">Volume target</label><input id="fQty" type="number" min="0" step="any" value="${t.qty || ''}" ${ro}></div>
+        <div class="fld"><label for="fUnit">Satuan</label><input id="fUnit" list="units" value="${H(t.unit)}" ${ro}></div>
+        <div class="fld"><label for="fCost">Biaya (Rp)</label><input id="fCost" type="number" min="0" step="any" value="${t.cost || ''}" ${ro}></div>
+        <div class="fld"><label for="fW">Bobot manual</label><input id="fW" type="number" min="0" step="any" value="${t.w || ''}" ${ro} placeholder="otomatis"></div>
+      </div>
+      <div class="hint">Bobot saat ini ${nf(t.bobot, 2)}% · rencana ${pc(t.plan)} · realisasi ${pc(t.act)}${t.qty ? ` (${nf(actualQty(ST.prog, t.uid, ST.statusDn), 2)} / ${nf(t.qty, 2)} ${H(t.unit)})` : ''}${ent.length ? ` · ${ent.length} catatan progres` : ''}</div>`}
+    </div>
+    <footer class="edit-only"><button class="btn pri" data-dc="apply">Terapkan</button><button class="btn" data-dc="baseline">Baseline aktivitas ini</button><button class="btn ghost danger" data-dc="del">Hapus</button></footer>
+    <datalist id="units">${UNITS.map(u => `<option value="${H(u)}">`).join('')}</datalist>
+  </aside>`;
+}
+function wireDrawer() {
+  const dr = $('.drawer'); const t = ST.byUid.get(ST.sel);
+  dr.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); apply(); } });
+  dr.onclick = e => { const b = e.target.closest('[data-dc]'); if (!b) return; const a = b.dataset.dc;
+    if (a === 'close') { ST.sel = null; renderGantt(); } else if (a === 'apply') apply(); else if (a === 'del') delTask(); else if (a === 'baseline') { pushUndo(); setBaseline(true); commit(); toast('Baseline aktivitas diperbarui.'); } };
+  function apply() {
+    if (!ST.canWrite) return; const v = id => { const el = $('#' + id); return el ? el.value : null; };
+    const pr = textToPreds(v('fPred'), ST.tasks); if (pr.errs.length) { $('#predErr') ? $('#predErr').textContent = 'Tidak dikenali: ' + pr.errs.join(', ') : toast('Predecessor tidak dikenali: ' + pr.errs.join(', ')); return; }
+    if (pr.preds.some(p => p.u === t.uid)) { toast('Aktivitas tidak bisa menjadi predecessor dirinya sendiri.'); return; }
+    pushUndo(); t.name = (v('fName') || '').trim() || t.name; t.preds = pr.preds;
+    if (!t.sum) { const ms = $('#fMs').checked; t.ms = ms; const d = parseFloat(v('fDur')); t.dur = ms ? 0 : (isNaN(d) ? t.dur : Math.max(0, d)); if (!ms && t.dur === 0) t.ms = true;
+      t.snet = v('fSnet') || null; t.qty = parseFloat(v('fQty')) || 0; t.unit = (v('fUnit') || '').trim(); t.cost = parseFloat(v('fCost')) || 0; t.w = parseFloat(v('fW')) || 0; }
+    commit(); if (ST.sched.cycle) toast('Dependency melingkar terdeteksi. Periksa predecessor.'); else toast('Perubahan diterapkan.');
+  }
+}
+
+/* ---------- Pengaturan ---------- */
+function openSettings() {
+  const p = ST.proj; const ro = ST.canWrite ? '' : 'disabled';
+  modal('Pengaturan proyek', `
+    <div class="fld"><label for="sName">Nama proyek</label><input id="sName" value="${H(p.name)}" ${ro}></div>
+    <div class="grid2"><div class="fld"><label for="sStart">Tanggal mulai proyek</label><input id="sStart" type="date" value="${H(p.start || '')}" ${ro}></div>
+    <div class="fld"><label for="sHpd">Jam kerja per hari</label><input id="sHpd" type="number" min="1" max="24" value="${(p.mpd || 480) / 60}" ${ro}></div></div>
+    <div class="fld"><span class="lbl">Hari kerja</span><div class="wdays">${[1, 2, 3, 4, 5, 6, 0].map(i => `<label><input type="checkbox" data-wd="${i}" ${p.workdays[i] ? 'checked' : ''} ${ro}> ${DOWS[i]}</label>`).join('')}</div></div>
+    <div class="fld"><label for="sW">Dasar bobot progres</label><select id="sW" ${ro}><option value="cost" ${p.weightMode === 'cost' ? 'selected' : ''}>Biaya aktivitas (RAB)</option><option value="dur" ${p.weightMode !== 'cost' ? 'selected' : ''}>Durasi baseline</option></select>
+    <span class="hint">Bobot manual pada aktivitas selalu didahulukan. Jika biaya kosong, durasi yang dipakai.</span></div>`,
+    [{ label: 'Batal' }, ...(ST.canWrite ? [{ label: 'Simpan', cls: 'pri', fn: mb => {
+      const wd = [false, false, false, false, false, false, false]; $$('[data-wd]', mb).forEach(c => wd[+c.dataset.wd] = c.checked); if (!wd.some(Boolean)) { toast('Pilih minimal satu hari kerja.'); return false; }
+      pushUndo(); p.name = $('#sName', mb).value.trim() || p.name; p.start = $('#sStart', mb).value || p.start; p.mpd = Math.max(60, (+$('#sHpd', mb).value || 8) * 60); p.workdays = wd; p.weightMode = $('#sW', mb).value; commit(); } }] : [])]);
+}
+
+/* ---------- Modul progres ---------- */
+function summaries() { return ST.tasks.filter(t => t.sum); }
+function isAdmin() { return ST.role === 'admin'; }
+function myMember() { return ST.me && ST.team[ST.me] ? ST.team[ST.me] : null; }
+function byLabel(id) { if (!id) return '—'; const m = ST.team[id]; if (m && m.label) return m.label; if (id === ST.me && isAdmin()) return 'Admin'; return ''; }
+function allowedSums() {
+  const sums = summaries(); const m = myMember();
+  if (isAdmin() || !m || !m.groups || !m.groups.length) return sums;
+  const g = new Set(m.groups); return sums.filter(s => { for (let a = s; a; a = a.parent) if (g.has(a.uid)) return true; return false; });
+}
+function renderProg() {
+  const sums = allowedSums(); const admin = isAdmin();
+  if (!ST.pgGroup || !sums.some(s => s.uid === ST.pgGroup)) ST.pgGroup = (sums.find(s => leavesOf(s).some(l => { const f = l.bsDn ?? l.startDn, g = l.bfDn ?? l.finishDn; return f <= TODAY && g >= TODAY - 7; })) || sums[0] || { uid: '__all' }).uid;
+  const grp = ST.byUid.get(ST.pgGroup); const items = grp ? leavesOf(grp) : (sums.length ? [] : ST.tasks.filter(t => !t.sum));
+  const dn = isoToDn(ST.pgDate) || TODAY; const canEntry = admin || ST.role === 'pel';
+  const startMon = ST.sched.startDn - ((dnDow(ST.sched.startDn) + 6) % 7); const wk = Math.floor((dn - startMon) / 7) + 1; const wkA = startMon + (wk - 1) * 7;
+  computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, dn);
+  let ents = []; items.forEach(t => entriesOf(ST.prog, t.uid).forEach(e => ents.push({ ...e, t })));
+  if (ST.histMine && !admin) ents = ents.filter(e => e.by === ST.me);
+  ents.sort((a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : 0);
+  const me = myMember(); const ids = [...new Set(ents.map(e => e.by).filter(Boolean))];
+  const L = (lbl, extra = '') => `data-l="${lbl}" ${extra}`;
+  $('#main').innerHTML = `<div class="view scroll"><div class="wrap">
+    <div class="pgrid">
+      <section class="card"><div class="hd"><h2>Catat progres lapangan</h2><span class="sub">${me && !admin ? 'Pelaksana: <b>' + H(me.label) + '</b> · ' : ''}Isi volume yang dikerjakan pada periode ini, bukan kumulatif.</span></div>
+        <div class="bd">
+          <div class="pform">
+            <div class="fld grow"><label for="pGroup">Kelompok pekerjaan</label><select id="pGroup">${sums.map(s => `<option value="${H(s.uid)}" ${s.uid === ST.pgGroup ? 'selected' : ''}>${' '.repeat(s.lvl - 1)}${s.wbs} ${H(s.name)}</option>`).join('')}${sums.length ? '' : '<option value="__all">Semua aktivitas</option>'}</select></div>
+            <div class="fld"><label for="pDate">Tanggal</label><input id="pDate" type="date" value="${ST.pgDate}" max="${dnToIso(TODAY + 7)}"></div>
+            <div class="fld"><span class="lbl">Periode</span><div class="seg" role="group"><button data-per="D" aria-pressed="${ST.pgPer === 'D'}">Harian</button><button data-per="W" aria-pressed="${ST.pgPer === 'W'}">Mingguan</button></div></div>
+          </div>
+          <p class="hint" style="margin:10px 0 0;color:var(--muted);font-size:12.5px">${ST.pgPer === 'W' ? `Minggu ke-${wk} proyek (${fmtDn(wkA, false)} – ${fmtDn(wkA + 6)}). Entri dicatat pada tanggal ${fmtDn(dn)}.` : `${DOWS[dnDow(dn)]}, ${fmtDn(dn)} · minggu ke-${wk} proyek.`}${ST.sched.cal.isWork(dn) ? '' : ' <b>Tanggal ini bukan hari kerja di kalender proyek.</b>'}</p>
+        </div>
+        <div class="tw"><table class="t" id="pTable"><thead><tr><th>Item pekerjaan</th><th>Satuan</th><th class="n">Volume target</th><th class="n">Kumulatif</th><th style="min-width:110px">Realisasi vs rencana</th><th class="n">Volume periode ini</th><th>Catatan</th></tr></thead><tbody>
+        ${items.map(t => { const q = actualQty(ST.prog, t.uid, dn); const sub = t.parent && t.parent !== grp ? t.parent.name : ''; return `<tr data-uid="${H(t.uid)}">
+          <td style="min-width:200px"><div style="font-weight:500">${H(t.name)}${t.crit && t.act < 1 ? ' <span class="chip crit">Kritis</span>' : ''}</div><div style="font-size:11.5px;color:var(--faint)">${t.wbs}${sub ? ' · ' + H(sub) : ''} · ${fmtDn(t.bsDn ?? t.startDn)}–${fmtDn(t.bfDn ?? t.finishDn)}</div></td>
+          <td ${L('Satuan')}>${admin ? `<input class="inp uin" list="units" data-f="unit" value="${H(t.unit)}" aria-label="Satuan ${H(t.name)}">` : `<span class="mono">${H(t.unit) || '–'}</span>`}</td>
+          <td class="n" ${L('Target')}>${admin ? `<input class="inp tin" type="number" min="0" step="any" data-f="qty" value="${t.qty || ''}" aria-label="Volume target ${H(t.name)}">` : `<span class="mono">${t.qty ? nf(t.qty, t.qty % 1 ? 2 : 0) : '–'}</span>`}</td>
+          <td class="n mono" ${L('Kumulatif')}>${t.qty ? nf(q, q % 1 ? 2 : 0) : '–'}<div style="font-size:11px;color:var(--faint)">${t.qty ? 'sisa ' + nf(Math.max(0, t.qty - q), 0) : ''}</div></td>
+          <td ${L('Realisasi / rencana')}><div class="pbar" title="Realisasi ${pc(t.act)} · rencana ${pc(t.plan)}"><i style="width:${t.act * 100}%;background:${t.act + 0.05 < t.plan ? 'var(--bad)' : 'var(--accent)'}"></i><b style="left:${t.plan * 100}%"></b></div><div style="font-size:11px;color:var(--muted);margin-top:3px" class="mono">${pc(t.act, 0)} / ${pc(t.plan, 0)}</div></td>
+          <td class="n qcell" ${L('Volume periode ini' + (t.unit ? ' (' + H(t.unit) + ')' : ''))}><input class="inp qin" type="number" inputmode="decimal" min="0" step="any" data-f="q" ${canEntry && t.qty ? '' : 'disabled'} ${t.qty ? '' : `placeholder="${admin ? 'isi target' : 'target kosong'}"`} aria-label="Volume periode ${H(t.name)}"></td>
+          <td class="ncell" ${L('Catatan')}><input class="inp nin" data-f="n" ${canEntry ? '' : 'disabled'} placeholder="opsional" aria-label="Catatan ${H(t.name)}"></td></tr>`; }).join('')}
+        </tbody></table></div>
+        ${canEntry ? `<div class="bd" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line2)"><button class="btn pri" id="pSave">Simpan progres</button><span class="hint" id="pMsg" style="color:var(--muted);font-size:12.5px">${admin ? 'Satuan dan volume target ikut tersimpan ke master schedule.' : 'Item tanpa volume target diatur oleh admin.'}</span></div>` : ''}
+        <datalist id="units">${UNITS.map(u => `<option value="${H(u)}">`).join('')}</datalist>
+      </section>
+      <aside class="card"><div class="hd"><h2>Riwayat</h2><span class="sub">${ents.length} entri · ${H(grp ? grp.name : 'semua')}</span>
+        ${!admin ? `<div class="seg" role="group" style="margin-left:auto"><button data-hm="0" aria-pressed="${!ST.histMine}">Semua</button><button data-hm="1" aria-pressed="${!!ST.histMine}">Entri saya</button></div>` : ''}</div>
+        <div class="hist">${ents.length ? ents.map(e => { const own = e.by && e.by === ST.me; const who = byLabel(e.by); return `<div class="hi" data-e="${H(e.id)}" data-u="${H(e.t.uid)}"><span class="d">${fmtDn(isoToDn(e.d))}<br><span class="chip">${e.p === 'W' ? 'Mingguan' : 'Harian'}</span></span><span class="w">${H(e.t.name)}<small>${e.by ? `oleh <span ${who ? '' : `data-pid="${H(e.by)}"`}>${H(who || '…')}</span>` : ''}${e.n ? (e.by ? ' · ' : '') + H(e.n) : ''}</small></span><span class="q">+${nf(e.q, e.q % 1 ? 2 : 0)} ${H(e.t.unit)}<br>${admin || own ? '<button class="btn ghost danger" style="padding:2px 6px;font-size:11.5px" data-del="1">Hapus</button>' : ''}</span></div>`; }).join('') : `<div class="empty">${ST.histMine ? 'Anda belum mencatat progres di kelompok ini.' : 'Belum ada catatan progres untuk kelompok ini.'}</div>`}</div>
+      </aside>
+    </div></div></div>`;
+  $('#pGroup').onchange = e => { ST.pgGroup = e.target.value; renderProg(); };
+  $('#pDate').onchange = e => { ST.pgDate = e.target.value || dnToIso(TODAY); renderProg(); };
+  $$('[data-per]').forEach(b => b.onclick = () => { ST.pgPer = b.dataset.per; if (ST.pgPer === 'W') { const d = isoToDn(ST.pgDate); const sat = d + ((6 - dnDow(d) + 7) % 7); ST.pgDate = dnToIso(Math.min(sat, TODAY + 6)); } renderProg(); });
+  $$('[data-hm]').forEach(b => b.onclick = () => { ST.histMine = b.dataset.hm === '1'; renderProg(); });
+  const sv = $('#pSave'); if (sv) sv.onclick = saveProg;
+  $('.hist').onclick = e => { const b = e.target.closest('[data-del]'); if (!b) return; const h = b.closest('.hi');
+    if (b.dataset.confirm) { writeProg(h.dataset.u, null, h.dataset.e).catch(handleDbErr); recalc(); renderProg(); toast('Entri dihapus.'); return; }
+    b.dataset.confirm = '1'; b.textContent = 'Yakin hapus?'; setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = 'Hapus'; } }, 3000); };
+  fillProfiles($('.hist'));
+}
+async function saveProg() {
+  const admin = isAdmin(); if (!admin && ST.role !== 'pel') return;
+  const rows = $$('#pTable tbody tr'); let schedChanged = false; const adds = []; const errs = [];
+  rows.forEach(r => { const t = ST.byUid.get(r.dataset.uid); const g = f => { const el = $(`[data-f="${f}"]`, r); return el ? el.value.trim() : null; };
+    if (admin) { const unit = g('unit'), qty = parseFloat(g('qty')) || 0; if (unit !== (t.unit || '') || qty !== (+t.qty || 0)) { if (!schedChanged) pushUndo(); t.unit = unit; t.qty = qty; schedChanged = true; } }
+    const q = parseFloat((g('q') || '').replace(',', '.')); if (!isNaN(q) && q !== 0) { if (!t.qty) { errs.push(t.name); return; } adds.push({ t, q, n: g('n') || '' }); } });
+  if (errs.length) { $('#pMsg').innerHTML = `<span style="color:var(--bad)">Isi volume target dulu untuk: ${H(errs.join(', '))}.</span>`; return; }
+  if (!adds.length && !schedChanged) { $('#pMsg').textContent = 'Belum ada volume yang diisi.'; return; }
+  if (schedChanged) { recalc(); queueSave(); }
+  const over = []; $('#pSave').disabled = true; let ok = 0;
+  try { for (const a of adds) { const cur = actualQty(ST.prog, a.t.uid, null); if (cur + a.q > a.t.qty * 1.0001) over.push(a.t.name); const e = { d: ST.pgDate, p: ST.pgPer, q: a.q, n: a.n }; if (ST.me) e.by = ST.me; await writeProg(a.t.uid, { [uid()]: e }); ok++; } }
+  catch (e) { handleDbErr(e); }
+  recalc(); renderProg();
+  if (ok || schedChanged) toast(ok ? `${ok} entri progres disimpan untuk ${fmtDn(isoToDn(ST.pgDate))}.` : 'Volume target diperbarui.');
+  if (over.length) setTimeout(() => toast('Kumulatif melebihi volume target: ' + over.join(', ') + '. Periksa target atau entri.'), 1200);
+}
+async function fillProfiles(root) {
+  if (!root || !user) return; const els = $$('[data-pid]', root); if (!els.length) return;
+  const ids = [...new Set(els.map(e => e.dataset.pid))]; let ps = {}; try { ps = await user.profiles(ids); } catch (e) { return; }
+  els.forEach(el => { const p = ps[el.dataset.pid]; el.textContent = (p && p.name) || el.dataset.fallback || 'Pengguna'; });
+}
+
+/* ---------- Tim pelaksana (admin) ---------- */
+function saveTeam() {
+  if (!db) { LS.set('team', JSON.stringify(ST.team)); render(); return Promise.resolve(); }
+  setSave('busy', 'Menyimpan…');
+  return db.doc('team/pelaksana').set({ list: ST.team }).then(() => setSave('', 'Tersimpan'), e => { handleDbErr(e); });
+}
+function groupPicker(sel) {
+  const s = new Set(sel || []);
+  return `<div class="fld"><span class="lbl">Kelompok pekerjaan yang boleh diisi</span><div class="gpick">${summaries().map(x => `<label style="padding-left:${(x.lvl - 1) * 16 + 8}px"><input type="checkbox" data-grp="${H(x.uid)}" ${s.has(x.uid) ? 'checked' : ''}> <span class="mono" style="font-size:11.5px;color:var(--muted)">${x.wbs}</span> ${H(x.name)}</label>`).join('')}</div><span class="hint">Tidak dicentang sama sekali = boleh mengisi semua kelompok.</span></div>`;
+}
+function memberModal(title, id, init, profileName, onDone) {
+  modal(title, `${profileName != null ? `<div class="boxed" style="font-size:12.5px">Akun Claude: <b data-pid="${H(id)}" data-fallback="${H(profileName || 'tidak diketahui')}">${H(profileName || '…')}</b></div>` : ''}
+    <div class="fld"><label for="mLabel">Nama pelaksana</label><input id="mLabel" value="${H(init.label || '')}" placeholder="mis. Budi Santoso – Mandor Struktur" maxlength="80"></div>
+    ${groupPicker(init.groups)}`,
+    [{ label: 'Batal' }, { label: 'Simpan', cls: 'pri', fn: mb => {
+      const label = $('#mLabel', mb).value.trim(); if (!label) { $('#mLabel', mb).focus(); toast('Nama pelaksana wajib diisi.'); return false; }
+      const groups = $$('[data-grp]', mb).filter(c => c.checked).map(c => c.dataset.grp);
+      ST.team[id] = { ...(ST.team[id] || {}), label, groups, active: ST.team[id] ? ST.team[id].active !== false : true, at: (ST.team[id] && ST.team[id].at) || new Date().toISOString() };
+      saveTeam().then(() => { onDone && onDone(); render(); toast('Pelaksana ' + label + ' disimpan.'); });
+    } }], mb => fillProfiles(mb));
+}
+function statsBy() {
+  const s = {}; const wk = TODAY - 6;
+  ST.tasks.filter(t => !t.sum).forEach(t => entriesOf(ST.prog, t.uid).forEach(e => { if (!e.by) return; const x = s[e.by] || (s[e.by] = { n: 0, n7: 0, last: null }); x.n++; const d = isoToDn(e.d); if (d >= wk) x.n7++; if (!x.last || e.d > x.last) x.last = e.d; }));
+  return s;
+}
+function renderTeam() {
+  const ids = Object.keys(ST.team).sort((a, b) => (ST.team[a].label || '').localeCompare(ST.team[b].label || '')); const st = statsBy();
+  const gName = u => { const t = ST.byUid && ST.byUid.get(u); return t ? t.wbs + ' ' + t.name : '(dihapus)'; };
+  const canSearch = !!(user && db);
+  $('#main').innerHTML = `<div class="view scroll"><div class="wrap">
+    <div class="dhead"><h2>Tim pelaksana<small>Pelaksana hanya melihat modul Pelaksana dan hanya bisa mengisi kelompok pekerjaan yang ditugaskan. Admin melihat semua modul.</small></h2></div>
+    ${ST.reqs.length ? `<section class="card" style="margin-bottom:16px;border-color:var(--warn)"><div class="hd"><h2>Permintaan pendaftaran</h2><span class="chip warn">${ST.reqs.length} menunggu</span></div>
+      ${ST.reqs.map(r => `<div class="treq" data-rid="${H(r.id)}"><div style="min-width:0"><b>${H(r.label || '(tanpa nama)')}</b>${r.note ? ` <span style="color:var(--muted)">· ${H(r.note)}</span>` : ''}<div class="hint" style="font-size:12px;color:var(--muted)">Akun: <span data-pid="${H(r.id)}" data-fallback="tidak diketahui">…</span> · diajukan ${r.at ? fmtDn(isoToDn(r.at.slice(0, 10))) : ''}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" data-req="ok">Setujui…</button><button class="btn ghost danger" data-req="no">Tolak</button></div></div>`).join('')}</section>` : ''}
+    <section class="card" style="margin-bottom:16px"><div class="hd"><h2>Tambah pelaksana</h2><span class="sub">${canSearch ? 'Cari rekan di organisasi Anda, atau minta pelaksana membuka halaman ini dan menekan "Ajukan pendaftaran".' : 'Mode lokal: daftar pelaksana tersimpan di browser ini.'}</span></div>
+      <div class="bd">${canSearch ? `<div class="fld" style="max-width:460px;position:relative"><label for="tSearch">Cari nama atau email</label><input id="tSearch" type="search" autocomplete="off" placeholder="Ketik nama…"><div id="tRes" class="tres" hidden></div></div>` : `<button class="btn pri" id="tLocal">+ Tambah pelaksana</button>`}
+        <p class="hint" style="font-size:12.5px;color:var(--muted);margin:12px 0 0">Agar bisa menyimpan progres, pelaksana perlu akses <b>Contributor</b> pada halaman ini. Atur lewat menu <b>Share</b> di kanan atas halaman.</p></div></section>
+    <section class="card"><div class="hd"><h2>Daftar pelaksana</h2><span class="sub">${ids.length} terdaftar</span></div>
+      ${ids.length ? `<div class="tw"><table class="t" id="tTable"><thead><tr><th>Nama pelaksana</th><th>Akun</th><th>Kelompok pekerjaan</th><th class="n">Entri 7 hari</th><th class="n">Total entri</th><th>Entri terakhir</th><th>Status</th><th></th></tr></thead><tbody>
+      ${ids.map(id => { const m = ST.team[id]; const s = st[id] || { n: 0, n7: 0, last: null }; const on = m.active !== false; return `<tr data-mid="${H(id)}"><td style="font-weight:500">${H(m.label)}</td><td style="color:var(--muted)">${id.startsWith('local-') ? '–' : `<span data-pid="${H(id)}" data-fallback="tidak diketahui">…</span>`}</td>
+        <td style="max-width:280px">${m.groups && m.groups.length ? m.groups.map(g => `<span class="chip" style="margin:1px">${H(gName(g))}</span>`).join(' ') : '<span style="color:var(--muted)">Semua kelompok</span>'}</td>
+        <td class="n mono">${s.n7}</td><td class="n mono">${s.n}</td><td class="mono" style="font-size:12px">${s.last ? fmtDn(isoToDn(s.last)) : '–'}</td>
+        <td><span class="chip ${on ? 'good' : ''}">${on ? 'Aktif' : 'Nonaktif'}</span></td>
+        <td style="white-space:nowrap;text-align:right"><button class="btn ghost" data-m="edit">Ubah</button><button class="btn ghost" data-m="tog">${on ? 'Nonaktifkan' : 'Aktifkan'}</button><button class="btn ghost danger" data-m="del">Hapus</button></td></tr>`; }).join('')}
+      </tbody></table></div>` : '<div class="empty">Belum ada pelaksana terdaftar.</div>'}</section>
+  </div></div>`;
+  fillProfiles($('#main'));
+  const loc = $('#tLocal'); if (loc) loc.onclick = () => memberModal('Tambah pelaksana', 'local-' + uid(), {}, null);
+  const si = $('#tSearch'), res = $('#tRes');
+  if (si) {
+    let hits = [];
+    const show = async q => { try { hits = await user.search(q); } catch (e) { hits = []; } if (si.value !== q) return;
+      res.hidden = false; res.innerHTML = hits.length ? hits.map((h, i) => `<button data-hit="${i}"><img src="${H(h.avatarUrl)}" alt=""><span></span>${ST.team[h.id] ? '<span class="chip good">terdaftar</span>' : ''}</button>`).join('') : `<div class="hint" style="padding:10px 12px;font-size:12.5px;color:var(--muted)">${q ? 'Tidak ditemukan. Minta pelaksana membuka halaman ini untuk mengajukan pendaftaran.' : 'Ketik nama untuk mencari.'}</div>`;
+      $$('[data-hit]', res).forEach(b => { $('span', b).textContent = hits[+b.dataset.hit].name || 'Pengguna'; }); };
+    si.oninput = () => show(si.value.trim()); si.onfocus = () => show(si.value.trim());
+    res.onclick = e => { const b = e.target.closest('[data-hit]'); if (!b) return; const h = hits[+b.dataset.hit]; res.hidden = true; si.value = '';
+      memberModal(ST.team[h.id] ? 'Ubah pelaksana' : 'Tambah pelaksana', h.id, ST.team[h.id] || { label: h.name }, h.name || ''); };
+    document.addEventListener('click', e => { if (res.isConnected && !e.target.closest('#tRes') && e.target !== si) res.hidden = true; });
+  }
+  $('#main').onclick = e => {
+    const rq = e.target.closest('[data-req]');
+    if (rq) { const id = rq.closest('[data-rid]').dataset.rid; const r = ST.reqs.find(x => x.id === id);
+      if (rq.dataset.req === 'ok') memberModal('Setujui pendaftaran', id, { label: r.label }, '', () => db.doc('requests/' + id).delete().catch(handleDbErr));
+      else if (rq.dataset.confirm) { db.doc('requests/' + id).delete().then(() => toast('Permintaan ditolak.'), handleDbErr); }
+      else { rq.dataset.confirm = '1'; rq.textContent = 'Yakin tolak?'; }
+      return; }
+    const b = e.target.closest('[data-m]'); if (!b) return; const id = b.closest('[data-mid]').dataset.mid; const m = ST.team[id];
+    if (b.dataset.m === 'edit') memberModal('Ubah pelaksana', id, m, id.startsWith('local-') ? null : '');
+    else if (b.dataset.m === 'tog') { m.active = m.active === false; saveTeam().then(() => { render(); toast(m.label + (m.active ? ' diaktifkan.' : ' dinonaktifkan. Akunnya tidak bisa lagi mengisi progres.')); }); }
+    else modal('Hapus pelaksana?', `<p style="margin:0"><b>${H(m.label)}</b> dihapus dari daftar dan tidak bisa lagi mengisi progres. Entri progres yang sudah dicatat tetap tersimpan.</p>`, [{ label: 'Batal' }, { label: 'Hapus', cls: 'pri', fn: () => { delete ST.team[id]; saveTeam().then(() => render()); } }]);
+  };
+}
+
+/* ---------- Pendaftaran (akun belum terdaftar) ---------- */
+function renderReg() {
+  const r = ST.myReq; const m = ST.me && ST.team[ST.me];
+  let body;
+  if (!ST.me) body = `<h3>Masuk untuk mengisi progres</h3><p>Halaman ini memerlukan akun Claude yang sudah masuk. Buka tautan ini saat sudah masuk ke akun Anda.</p>`;
+  else if (m && m.active === false) body = `<h3>Akses pelaksana dinonaktifkan</h3><p>Akun Anda terdaftar sebagai <b>${H(m.label)}</b> tetapi sedang dinonaktifkan. Hubungi admin proyek untuk mengaktifkan kembali.</p>`;
+  else if (r) body = `<h3>Menunggu persetujuan admin</h3><p>Permintaan Anda sebagai <b>${H(r.label)}</b>${r.note ? ' (' + H(r.note) + ')' : ''} sudah terkirim. Setelah disetujui, modul Pelaksana akan terbuka otomatis di halaman ini.</p><button class="btn" id="rEdit">Ubah data permintaan</button>`;
+  if (body) { $('#main').innerHTML = `<div class="view scroll"><div class="wrap"><div class="card" style="max-width:520px;margin:32px auto"><div class="empty" style="text-align:left;padding:24px">${body}</div></div></div></div>`; const ed = $('#rEdit'); if (ed) ed.onclick = () => { ST.regEdit = true; ST.myReq = null; renderReg(); }; return; }
+  $('#main').innerHTML = `<div class="view scroll"><div class="wrap"><section class="card" style="max-width:520px;margin:32px auto"><div class="hd"><h2>Daftar sebagai pelaksana</h2></div>
+    <div class="bd" style="display:flex;flex-direction:column;gap:12px">
+      <p style="margin:0;color:var(--muted)">Akun Anda belum terdaftar di proyek <b style="color:var(--ink)">${H(ST.proj ? ST.proj.name : '')}</b>. Isi nama Anda, admin akan menyetujui dan menentukan kelompok pekerjaan yang Anda isi.</p>
+      ${ST.writeOK === false ? '<div class="boxed" style="font-size:12.5px">Akses Anda pada halaman ini saat ini hanya <b>lihat</b>. Minta admin memberi akses <b>Contributor</b> lewat menu Share agar permintaan bisa dikirim.</div>' : ''}
+      <div class="fld"><label for="rName">Nama lengkap</label><input id="rName" maxlength="80" placeholder="mis. Budi Santoso"></div>
+      <div class="fld"><label for="rNote">Jabatan / bagian (opsional)</label><input id="rNote" maxlength="80" placeholder="mis. Mandor struktur"></div>
+      <div><button class="btn pri" id="rSend">Ajukan pendaftaran</button> <span id="rMsg" class="hint" style="font-size:12.5px"></span></div>
+    </div></section></div></div>`;
+  $('#rSend').onclick = async () => {
+    const label = $('#rName').value.trim(); if (!label) { $('#rName').focus(); $('#rMsg').textContent = 'Nama wajib diisi.'; return; }
+    const doc = { label, note: $('#rNote').value.trim(), at: new Date().toISOString() };
+    try { await db.doc('requests/' + ST.me).set(doc); ST.myReq = doc; render(); toast('Permintaan terkirim ke admin.'); }
+    catch (e) { console.error(e); $('#rMsg').innerHTML = '<span style="color:var(--bad)">' + (e && e.code === 'invalid_argument' ? 'Akses Anda hanya lihat. Minta admin memberi akses Contributor lewat menu Share, lalu coba lagi.' : 'Gagal mengirim. Coba lagi sebentar.') + '</span>'; }
+  };
+}
+
+/* ---------- Dashboard ---------- */
+function groupsForDash() { const tops = ST.tasks.filter(t => t.lvl === 1); if (tops.length === 1 && tops[0].sum) return tops[0].children; return tops; }
+function statusOf(dev) { return dev >= -0.005 ? ['good', 'Sesuai rencana'] : dev >= -0.05 ? ['warn', 'Waspada'] : ['bad', 'Terlambat']; }
+function renderDash() {
+  const sd = ST.statusDn; const cp = computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, sd); const dev = cp.act - cp.plan; const spi = cp.plan > 0 ? cp.act / cp.plan : null;
+  const leaves = ST.tasks.filter(t => !t.sum);
+  const bS = Math.min(...leaves.map(t => t.bsDn ?? t.startDn)), bF = Math.max(...leaves.map(t => t.bfDn ?? t.finishDn));
+  const cal = ST.sched.cal; const bDur = cal.idx(bF + 1) - cal.idx(bS);
+  const fc = spi && spi > 0.05 ? cal.dn(cal.idx(bS) + Math.ceil(bDur / Math.min(spi, 3)) - 1) : null;
+  const curF = ST.sched.finishDn; const slip = curF - bF;
+  const [sc, sl] = statusOf(dev);
+  const groups = groupsForDash();
+  const late = leaves.filter(t => t.plan - t.act > 0.05).map(t => ({ t, gap: (t.plan - t.act) * t.bobot })).sort((a, b) => b.gap - a.gap).slice(0, 8);
+  const bac = cp.totalCost;
+  $('#main').innerHTML = `<div class="view scroll"><div class="wrap">
+    <div class="dhead"><h2>Kemajuan terhadap baseline<small>${H(ST.proj.name)} · baseline ${fmtDn(bS)} – ${fmtDn(bF)} · ${bDur} hari kerja</small></h2>
+      <div class="fld"><label for="dDate">Tanggal status</label><input id="dDate" type="date" value="${dnToIso(sd)}"></div>
+      <span class="chip ${sc}" style="font-size:12.5px;padding:5px 10px">${sl}</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Rencana (baseline)</div><div class="v">${pc(cp.plan, 2)}</div><div class="s">kumulatif s.d. ${fmtDn(sd)}</div></div>
+      <div class="kpi ${sc}"><div class="k">Realisasi</div><div class="v">${pc(cp.act, 2)}</div><div class="s">dari volume terpasang</div></div>
+      <div class="kpi ${sc}"><div class="k">Deviasi</div><div class="v">${dev >= 0 ? '+' : ''}${nf(dev * 100, 2)}</div><div class="s">poin persen (SV%)</div></div>
+      <div class="kpi ${spi == null ? '' : spi >= 0.995 ? 'good' : spi >= 0.9 ? 'warn' : 'bad'}"><div class="k">SPI</div><div class="v">${spi == null ? '–' : nf(spi, 2)}</div><div class="s">EV ÷ PV</div></div>
+      <div class="kpi ${slip > 0 ? 'bad' : 'good'}"><div class="k">Selesai (jadwal kini)</div><div class="v" style="font-size:24px;padding-top:4px">${fmtDn(curF)}</div><div class="s">${slip === 0 ? 'sama dengan baseline' : (slip > 0 ? '+' : '') + slip + ' hari vs baseline'}${fc ? ` · tren SPI: ${fmtDn(fc)}` : ''}</div></div>
+    </div>
+    <div class="dgrid">
+      <section class="card"><div class="hd"><h2>Kurva S</h2><span class="sub">Kumulatif mingguan, rencana baseline vs realisasi</span></div><div class="bd"><div id="scurve" class="chart"></div></div></section>
+      <section class="card"><div class="hd"><h2>Progres mingguan</h2><span class="sub">8 minggu terakhir, % bobot proyek</span></div><div class="bd"><div id="wbar" class="chart"></div>
+        ${bac ? `<div class="evm" style="margin-top:14px"><div><b>${rp(bac)}</b><span>BAC (nilai kontrak)</span></div><div><b>${rp(bac * cp.plan)}</b><span>PV (nilai rencana)</span></div><div><b>${rp(bac * cp.act)}</b><span>EV (nilai hasil)</span></div><div><b>${rp(bac * dev)}</b><span>SV (EV − PV)</span></div></div>` : ''}</div></section>
+    </div>
+    <section class="card" style="margin-bottom:16px"><div class="hd"><h2>Per kelompok pekerjaan</h2><span class="sub">Bobot, rencana dan realisasi kumulatif s.d. ${fmtDn(sd)}</span></div>
+      <div class="tw"><table class="t"><thead><tr><th>WBS</th><th>Kelompok</th><th class="n">Bobot</th><th>Baseline</th><th class="n">Rencana</th><th class="n">Realisasi</th><th class="n">Deviasi</th><th style="min-width:130px">Progres</th><th>Status</th></tr></thead><tbody>
+      ${groups.map(g => { const d = g.act - g.plan; const [c, l] = g.plan === 0 && g.act === 0 ? ['', 'Belum mulai'] : g.act >= 0.9999 ? ['good', 'Selesai'] : statusOf(d);
+        return `<tr><td class="mono">${g.wbs}</td><td style="font-weight:500">${H(g.name)}${g.crit && g.act < 1 ? ' <span class="chip crit">Kritis</span>' : ''}</td><td class="n">${nf(g.bobot, 2)}%</td><td class="mono" style="font-size:12px;white-space:nowrap">${fmtDn(g.bsDn ?? g.startDn)} – ${fmtDn(g.bfDn ?? g.finishDn)}</td><td class="n">${pc(g.plan)}</td><td class="n">${pc(g.act)}</td><td class="n" style="color:${d < -0.05 ? 'var(--bad)' : d < -0.005 ? 'var(--warn)' : 'var(--good)'}">${d >= 0 ? '+' : ''}${nf(d * 100, 1)}</td>
+          <td><div class="pbar"><i style="width:${g.act * 100}%"></i><b style="left:${g.plan * 100}%"></b></div></td><td><span class="chip ${c}">${l}</span></td></tr>`; }).join('')}
+      <tr class="grp"><td></td><td>Total proyek</td><td class="n">100%</td><td class="mono" style="font-size:12px">${fmtDn(bS)} – ${fmtDn(bF)}</td><td class="n">${pc(cp.plan)}</td><td class="n">${pc(cp.act)}</td><td class="n">${dev >= 0 ? '+' : ''}${nf(dev * 100, 1)}</td><td><div class="pbar"><i style="width:${cp.act * 100}%"></i><b style="left:${cp.plan * 100}%"></b></div></td><td></td></tr>
+      </tbody></table></div></section>
+    <section class="card"><div class="hd"><h2>Item tertinggal dari rencana</h2><span class="sub">Selisih > 5 poin, diurutkan menurut dampak ke total proyek</span></div>
+      ${late.length ? `<div class="tw"><table class="t"><thead><tr><th>Item</th><th>Kelompok</th><th class="n">Volume</th><th class="n">Rencana</th><th class="n">Realisasi</th><th class="n">Dampak ke proyek</th><th>Float</th></tr></thead><tbody>
+      ${late.map(({ t, gap }) => `<tr><td style="font-weight:500">${H(t.name)}</td><td style="color:var(--muted)">${H(t.parent ? t.parent.name : '')}</td><td class="n mono">${t.qty ? nf(actualQty(ST.prog, t.uid, sd), 0) + ' / ' + nf(t.qty, 0) + ' ' + H(t.unit) : '–'}</td><td class="n">${pc(t.plan, 0)}</td><td class="n">${pc(t.act, 0)}</td><td class="n" style="color:var(--bad)">−${nf(gap, 2)} pp</td><td>${t.crit ? '<span class="chip crit">Kritis</span>' : `<span class="chip">${nf(t.float, 0)} hari</span>`}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Tidak ada item yang tertinggal lebih dari 5 poin.</div>'}</section>
+  </div></div>`;
+  $('#dDate').onchange = e => { const d = isoToDn(e.target.value); ST.statusDn = d || TODAY; recalc(); renderDash(); };
+  drawCharts();
+}
+function rp(v) { const a = Math.abs(v); const s = v < 0 ? '−' : ''; if (a >= 1e9) return s + 'Rp ' + nf(a / 1e9, 2) + ' M'; if (a >= 1e6) return s + 'Rp ' + nf(a / 1e6, 1) + ' jt'; return s + 'Rp ' + nf(a, 0); }
+let ro_ = null;
+function drawCharts() {
+  const el = $('#scurve'), wb = $('#wbar'); if (!el) return;
+  const pts = sCurve(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn); computeProgress(ST.proj, ST.tasks, ST.sched, ST.prog, ST.statusDn);
+  const draw = () => {
+    // Kurva S
+    const W = Math.max(280, el.clientWidth), Hh = W < 500 ? 230 : 290, m = { l: 38, r: 14, t: 12, b: 26 }; const iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+    const a = pts[0].dn - 6, b = pts[pts.length - 1].dn; const X = d => m.l + (d - a) / (b - a) * iw, Y = v => m.t + ih - v * ih;
+    let s = ''; [0, .25, .5, .75, 1].forEach(v => s += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line2)"/><text x="${m.l - 6}" y="${Y(v) + 3.5}" text-anchor="end">${v * 100}%</text>`);
+    let lastM = -1; const minGap = W < 500 ? 70 : 46; let lastX = -999;
+    for (let d = a; d <= b; d++) { const dt = new Date(d * DAY); if (dt.getUTCDate() === 1 && X(d) - lastX >= minGap) { lastX = X(d); s += `<line x1="${X(d)}" x2="${X(d)}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--line2)"/><text x="${X(d) + 3}" y="${Hh - 8}">${MONTHS[dt.getUTCMonth()]}${dt.getUTCMonth() === 0 ? ' ' + String(dt.getUTCFullYear()).slice(2) : ''}</text>`; } }
+    const pl = [[a, 0], ...pts.map(p => [p.dn, p.plan])]; const al = [[a, 0], ...pts.filter(p => p.act != null).map(p => [p.dn, p.act])];
+    const sdx = X(Math.min(ST.statusDn, b));
+    s += `<path d="M${pl.map(p => X(p[0]) + ' ' + Y(p[1])).join('L')}L${X(b)} ${Y(0)}L${X(a)} ${Y(0)}z" fill="var(--plan)" opacity=".1"/>`;
+    s += `<path d="M${pl.map(p => X(p[0]) + ' ' + Y(p[1])).join('L')}" fill="none" stroke="var(--plan)" stroke-width="1.8" stroke-dasharray="5 3"/>`;
+    s += `<line x1="${sdx}" x2="${sdx}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--today)" stroke-dasharray="3 3"/>`;
+    if (al.length > 1) { const lp = al[al.length - 1]; s += `<path d="M${al.map(p => X(p[0]) + ' ' + Y(p[1])).join('L')}" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round"/><circle cx="${X(lp[0])}" cy="${Y(lp[1])}" r="4.5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>`;
+      const pp = pts.find(p => p.dn === lp[0]); const lx = X(lp[0]); const anchor = lx > W - 120 ? 'end' : 'start'; const off = anchor === 'end' ? -8 : 8;
+      s += `<text x="${lx + off}" y="${Y(lp[1]) + 16}" text-anchor="${anchor}" style="fill:var(--accent);font-weight:600">Realisasi ${pc(lp[1], 1)}</text>`;
+      if (pp) s += `<text x="${lx + off}" y="${Y(pp.plan) - 8}" text-anchor="${anchor}" style="fill:var(--plan)">Rencana ${pc(pp.plan, 1)}</text>`; }
+    el.innerHTML = `<svg width="${W}" height="${Hh}" role="img" aria-label="Kurva S rencana dan realisasi">${s}</svg><div style="display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:6px"><span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--plan)" stroke-width="2" stroke-dasharray="5 3"/></svg> Rencana baseline</span><span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--accent)" stroke-width="3"/></svg> Realisasi</span><span><svg width="10" height="10"><line x1="5" y1="0" x2="5" y2="10" stroke="var(--today)" stroke-dasharray="2 2"/></svg> Tgl status</span></div>`;
+    // Batang mingguan
+    const done = pts.filter(p => p.act != null && !p.st); const wk = []; for (let i = Math.max(1, done.length - 8); i < done.length; i++) wk.push({ dn: done[i].dn, plan: done[i].plan - done[i - 1].plan, act: done[i].act - done[i - 1].act });
+    const W2 = Math.max(240, wb.clientWidth), H2 = 200, m2 = { l: 34, r: 6, t: 10, b: 24 }; const iw2 = W2 - m2.l - m2.r, ih2 = H2 - m2.t - m2.b;
+    const mx = Math.max(0.01, ...wk.map(w => Math.max(w.plan, w.act))); const step = mx > 0.08 ? 0.02 : mx > 0.04 ? 0.01 : 0.005; const top = Math.ceil(mx / step) * step;
+    const Y2 = v => m2.t + ih2 - Math.max(0, v) / top * ih2; let s2 = '';
+    for (let v = 0; v <= top + 1e-9; v += step) s2 += `<line x1="${m2.l}" x2="${W2 - m2.r}" y1="${Y2(v)}" y2="${Y2(v)}" stroke="var(--line2)"/><text x="${m2.l - 5}" y="${Y2(v) + 3.5}" text-anchor="end">${nf(v * 100, step < 0.01 ? 1 : 0)}</text>`;
+    const bw = iw2 / Math.max(1, wk.length); wk.forEach((w, i) => { const x = m2.l + i * bw; const b1 = Math.max(3, bw * 0.32);
+      s2 += `<rect x="${x + bw / 2 - b1 - 1}" y="${Y2(w.plan)}" width="${b1}" height="${Y2(0) - Y2(w.plan)}" fill="var(--plan)" opacity=".45" rx="1.5"><title>Rencana ${pc(w.plan, 2)}</title></rect><rect x="${x + bw / 2 + 1}" y="${Y2(w.act)}" width="${b1}" height="${Y2(0) - Y2(w.act)}" fill="${w.act + 0.0005 < w.plan ? 'var(--warn)' : 'var(--accent)'}" rx="1.5"><title>Realisasi ${pc(w.act, 2)}</title></rect>`;
+      s2 += `<text x="${x + bw / 2}" y="${H2 - 8}" text-anchor="middle">${fmtDn(w.dn, false).replace(' ', ' ')}</text>`; });
+    wb.innerHTML = wk.length ? `<svg width="${W2}" height="${H2}" role="img" aria-label="Progres mingguan">${s2}</svg><div style="display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-top:4px"><span><i style="display:inline-block;width:10px;height:10px;background:var(--plan);opacity:.45;border-radius:2px"></i> Rencana</span><span><i style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px"></i> Realisasi</span><span><i style="display:inline-block;width:10px;height:10px;background:var(--warn);border-radius:2px"></i> Di bawah rencana</span></div>` : '<div class="empty">Belum ada data mingguan.</div>';
+  };
+  draw(); if (ro_) ro_.disconnect(); ro_ = new ResizeObserver(() => { if ($('#scurve') === el) draw(); }); ro_.observe(el.parentElement);
+}
+
+init();
+
+</script>
+</body>
+</html>
